@@ -9,10 +9,12 @@ struct Node{
 	int count;
 	int label;
 	vector<Node*> children;
+	Node* parent;
 
-	Node(int l, int c){
+	Node(int l, int c, Node* p){
 		this->label = l;
 		this->count = c;
+		this->parent = p;
 	}
 };
 
@@ -56,12 +58,13 @@ public:
 	int sizeOfPointers;
 
 	Tree(){
-		this->root = new Node(-1, -1); // NULL node
+		this->root = new Node(-1, -1, NULL); // NULL node
 		int i=0;
 		for(auto it: itemsMap){
 			indexes[it.first] = i;
 			i++; 
 		}
+
 		this->sizeOfPointers = i+1;
 		pointerTable.reserve(this->sizeOfPointers);
 	}
@@ -77,9 +80,9 @@ public:
 			}
 		}
 
-		Node* newNode = new Node(trans.at(i), 1);
+		Node* newNode = new Node(trans.at(i), 1, root); // new Node: trans.at(i)->label, 1->freq, root->parent
 		root->children.push_back(newNode);
-		vector[this->indexes[trans.at(i)]].push_back(newNode);
+		vector[this->indexes[trans.at(i)]].push_back(newNode); // put it in pointerTable
 		
 		insertInTree(newNode, trans, ++i);
 		return;
@@ -101,6 +104,10 @@ void plantTree(ifstream& file){
         set<int>::iterator it = trans.begin();
         greenWood.insertInTree(greenWood->root, trans, it);
    }
+}
+
+void getFrequentSets(Tree& t){
+
 }
 
 int main(){
