@@ -112,36 +112,35 @@ set<set<int>> candidateGeneration(set<set<int>>& frequentSets) {
     }
 }
 
-//void AprioriAlgorithm(string dataFilePath) {
-//    ifstream file;
-//    file.open(dataFilePath);
-//
-//    std::string line;
-//    while (std::getline(file, line)) {
-//        std::vector<int> lineInts;
-//        std::stringstream lineStream(line);
-//
-//        int value;
-//        while (lineStream >> value) {
-//            // Add the integers from a line to a 1D array (vector)
-//            lineInts.push_back(value);
-//        }
-//        // When all the integers have been read, add the 1D array
-//        // into a 2D array (as one line in the 2D array)
-//        data.push_back(lineData);
-//    }
-//
-//    int d;
-//    for (int i = 0; i < 156; i++) {
-//        file >> d;
-//        cout << d << " " << endl;
-//    }
-//    file.close();
-//}
+set<set<int>> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh, int& totalTransactions) {
 
-//int main() {
-//    string s;
-//    s = "/home/solanki/Fall2019/COL761/Ass-1/webdocs.dat";
-//    AprioriAlgorithm(s);
-//    return 0;
-//}
+}
+
+vector<set<set<int>>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
+    int totalTransactions;
+    // for saving frequent sets, not saving their frequencies
+    vector<set<set<int>>> listOfF;
+    listOfF.push_back(frequentSet1Gen(dataFile, percentageSuppThresh, totalTransactions));
+    set<set<int>>& lastF = listOfF[0];
+
+    // loop check till Fk becomes empty
+    while(!lastF.empty()) {
+        // create pruned(check k-1 th set) candidates
+        set<set<int>> candidates = candidateGeneration(lastF);
+        // check thier frequencies
+        set<pair<set<int>, int>, decltype(pcmp)> frequenciesOfFreqSet = 
+        scanTransactionDB(dataFile, candidates);
+        // remove infrequent
+        for (auto setAndFreq: frequenciesOfFreqSet) {
+            
+        }
+    }
+}
+
+int main(int argc, char* argv[]) {
+    // argv[] = datafile outputfile support_threshold
+    ifstream dataFile;
+    dataFile.open(argv[1]);
+    aprioriAlgorithm(dataFile, (int) argv[3]);
+    return 0;
+}
