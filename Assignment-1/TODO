@@ -1,0 +1,3 @@
+Aproiori:
+    1. Optimizations
+        1.1 pruning step, checking in F^k-1 using hashset instead of set

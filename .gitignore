@@ -32,4 +32,5 @@
 *.app
 
 # IntelliJ IDE files
-Assignment-1/.idea
+**/.idea
+**/.vscode
