@@ -154,7 +154,7 @@ set<set<int>, cmp> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh,
     return f1;
 }
 
-vector<set<set<int>>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
+vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
     int totalTransactions;
     // for saving frequent sets, not saving their frequencies
     vector<set<set<int>, cmp>> listOfF;
@@ -173,7 +173,7 @@ vector<set<set<int>>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThr
         // remove infrequent
         for (auto itemAndFreq: frequenciesOfFreqSet) {
             if (itemAndFreq.second < suppThresh) {
-                // set equality comparision
+                // TODO: may cause error
                 candidates.erase(itemAndFreq.first);
             }
         }
@@ -181,12 +181,25 @@ vector<set<set<int>>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThr
         k++;
         lastF = listOfF[k];
     }
+    return listOfF;
 }
 
 int main(int argc, char* argv[]) {
     // argv[] = datafile outputfile support_threshold
     ifstream dataFile;
     dataFile.open(argv[1]);
-    aprioriAlgorithm(dataFile, (int) argv[3]);
+    vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atoi(argv[3]));
+    ofstream outFile;
+    for (auto f:listOfF) {
+        for (auto itemSets: f) {
+            for (auto it=itemSets.begin(); it!=itemSets.end(); it++) {
+                outFile << *it;
+                if (it != itemSets.end()--) {
+                    outFile << " ";
+                }
+            }
+            outFile << '\n';
+        }
+    }
     return 0;
 }
