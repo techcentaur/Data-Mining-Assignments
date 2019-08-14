@@ -142,9 +142,9 @@ set<set<int>, cmp> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh,
         }
         totalTransactions++;
     }
-    int suppThresh = (percentageSuppThresh/100)*totalTransactions;
+    int suppThresh = (percentageSuppThresh*totalTransactions)/100;
     for (auto it=freqMap.begin(); it!=freqMap.end(); it++) {
-        if (suppThresh > it->second) {
+        if (suppThresh <= it->second) {
             set<int> s;
             s.insert(it->first);
             // because set of set
@@ -159,14 +159,13 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSu
     // for saving frequent sets, not saving their frequencies
     vector<set<set<int>, cmp>> listOfF;
     listOfF.push_back(frequentSet1Gen(dataFile, percentageSuppThresh, totalTransactions));
-    int suppThresh = (percentageSuppThresh/100)*totalTransactions;
+    int suppThresh = (percentageSuppThresh*totalTransactions)/100;
 
     int k = 0;
-    set<set<int>, cmp>& lastF = listOfF[k];
     // loop check till Fk becomes empty
-    while(!lastF.empty()) {
+    while(!listOfF[k].empty()) {
         // create pruned(check k-1 th set) candidates
-        set<set<int>, cmp> candidates = generateCandidates(lastF);
+        set<set<int>, cmp> candidates = generateCandidates(listOfF[k]);
         // check thier frequencies
         set<pair<set<int>, int>, pcmp> frequenciesOfFreqSet = 
         scanTransactionDB(dataFile, candidates);
@@ -179,8 +178,8 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSu
         }
         listOfF.push_back(candidates);
         k++;
-        lastF = listOfF[k];
     }
+    dataFile.close();
     return listOfF;
 }
 
@@ -190,6 +189,7 @@ int main(int argc, char* argv[]) {
     dataFile.open(argv[1]);
     vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atoi(argv[3]));
     ofstream outFile;
+    outFile.open(argv[2]);
     for (auto f:listOfF) {
         for (auto itemSets: f) {
             for (auto it=itemSets.begin(); it!=itemSets.end(); it++) {
@@ -201,5 +201,6 @@ int main(int argc, char* argv[]) {
             outFile << '\n';
         }
     }
+    outFile.close();
     return 0;
 }
