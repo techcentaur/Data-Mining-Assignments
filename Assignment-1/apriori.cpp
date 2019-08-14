@@ -10,7 +10,8 @@
 
 using namespace std;
 
-bool cmp(set<int>& a, set<int>& b) {
+
+bool cmpFunc (const set<int>& a, const set<int>& b) {
     set<int>::iterator begin1 = a.begin();
     set<int>::iterator begin2 = b.begin();
     set<int>::iterator end1 = a.end();
@@ -25,13 +26,23 @@ bool cmp(set<int>& a, set<int>& b) {
     return false;
 }
 
-bool pcmp(pair<set<int>, int>& a, pair<set<int>, int>& b) {
-    return cmp(a.first, b.first);
-}
+struct pcmp {
+    bool operator() (const pair<set<int>, int>& a, const pair<set<int>, int>& b) const {
+        return cmpFunc(a.first, b.first);
+    }
+};
+
+struct cmp {
+    bool operator() (const set<int>& a, const set<int>& b) const {
+        return cmpFunc(a, b);
+    }
+    set<set<int>> s;
+};
+
 
 // Takes candidate set as input, scans the whole transaction database, and returns frequencies
-set<pair<set<int>, int>, decltype(pcmp)> scanTransactionDB(ifstream& file, set<set<int>>& candidates) {
-    set<pair<set<int>, int>, decltype(pcmp)> frequencies;
+set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>>& candidates) {
+    set<pair<set<int>, int>, pcmp> frequencies;
     
     for (auto c: candidates) {
         frequencies.insert(make_pair(c, 0));
@@ -63,25 +74,41 @@ set<pair<set<int>, int>, decltype(pcmp)> scanTransactionDB(ifstream& file, set<s
     return frequencies;
 };
 
-// Generates candidate sets of k length given frequent sets of k-1 length
+// // Generates candidate sets of k length given frequent sets of k-1 length
 set<set<int>> candidateGeneration(set<set<int>>& frequentSets) {
-    vector <set<int>> candidateSets;
+    set<set<int>, cmp> candidateSets;
 
-    for (int i = 0; i < frequentSets.size() - 1; i++) {
+    for (set<set<int>>::iterator i = frequentSets.begin(); i != --frequentSets.end(); ++i) {
+        set<int> s1 = *i;
+        set<set<int>>::iterator j = i;
+        set<int> s2 = *(++j);
+
         set<int> s;
-        for (i1 = begin1; i1 != end1; ++i1)
+        bool flag = true;
 
-        flag = includes(frequentSets[i].begin(), frequentSets[i].end(), frequentSets[i+1].begin(), frequentSets[i+1].end());
-        if (*frequentSets[i].rbegin() != *frequentSets[i+1].rbegin()) { continue; };
-
-        int size = frequentSets[i + 1].size();
-        copy(frequentSets[i + 1].begin(), frequentSets[i + 1].end(), s.begin());
-        s.insert(*frequentSets[i + 1].rbegin());
-
-        bool flag = false
-        for (auto f: frequentSets) {
-
+        set<int>::iterator begin1 = s1.begin();
+        set<int>::iterator begin2 = s2.begin();
+        set<int>::iterator end1 = s1.end();
+        set<int>::iterator end2 = s2.end();
+        set<int>::iterator i1;
+        set<int>::iterator i2;
+        for (i1 = begin1, i2 = begin2; (i1 != end1) && (i2 != end2); ++i1, ++i2) {
+            if (*i1 != *i2) {
+                flag = false;
+                break;
+            }
         }
+        // flag = includes(s1.begin(), --s1.end(), s2.begin(), --s2.end());
+        if (!flag) { continue; }
+
+        int size = s1.size();
+        copy(s1.begin(), s1.end(), s.begin());
+        s.insert(*s2.rbegin());
+
+        // bool flag = false
+        // for (auto f: frequentSets) {
+
+        // }
     }
 }
 
