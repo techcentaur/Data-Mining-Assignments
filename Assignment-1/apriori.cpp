@@ -61,7 +61,7 @@ set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>>& 
         for (auto f: frequencies) {
             bool found = true;
             for (int item: f.first) {
-                if (items.find(item) == items.end()) {
+                if (items.find(item) != items.end()) {
                     found = false;
                     break;
                 }
@@ -72,44 +72,53 @@ set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>>& 
         }
     }
     return frequencies;
-};
+}
 
-// // Generates candidate sets of k length given frequent sets of k-1 length
-set<set<int>> candidateGeneration(set<set<int>>& frequentSets) {
+// Generates candidate sets of k length given frequent sets of k-1 length
+set<set<int>, cmp> generateCandidates(set<set<int>>& frequentSets) {
     set<set<int>, cmp> candidateSets;
 
     for (set<set<int>>::iterator i = frequentSets.begin(); i != --frequentSets.end(); ++i) {
         set<int> s1 = *i;
         set<set<int>>::iterator j = i;
         set<int> s2 = *(++j);
-
         set<int> s;
-        bool flag = true;
-
-        set<int>::iterator begin1 = s1.begin();
-        set<int>::iterator begin2 = s2.begin();
-        set<int>::iterator end1 = s1.end();
-        set<int>::iterator end2 = s2.end();
-        set<int>::iterator i1;
-        set<int>::iterator i2;
-        for (i1 = begin1, i2 = begin2; (i1 != end1) && (i2 != end2); ++i1, ++i2) {
-            if (*i1 != *i2) {
-                flag = false;
-                break;
-            }
-        }
-        // flag = includes(s1.begin(), --s1.end(), s2.begin(), --s2.end());
+        
+        // bool flag = true;
+        // set<int>::iterator begin1 = s1.begin();
+        // set<int>::iterator begin2 = s2.begin();
+        // set<int>::iterator end1 = --s1.end();
+        // set<int>::iterator end2 = --s2.end();
+        // set<int>::iterator i1;
+        // set<int>::iterator i2;
+        // for (i1 = begin1, i2 = begin2; (i1 != end1) && (i2 != end2); ++i1, ++i2) {
+        //     if (*i1 != *i2) {
+        //         flag = false;
+        //         break;
+        //     }
+        // }
+        bool flag = equal(s1.begin(), --s1.end(), s2.begin());
         if (!flag) { continue; }
 
         int size = s1.size();
-        copy(s1.begin(), s1.end(), s.begin());
+        for (auto m: s2) { s.insert(m); }
         s.insert(*s2.rbegin());
-
-        // bool flag = false
-        // for (auto f: frequentSets) {
-
-        // }
+        
+        flag = true;
+        for (set<int>::iterator k = s.begin(); k != s.end(); ++k) {
+            set<int> scopy;
+            for (auto m: s) { scopy.insert(m); }
+            scopy.erase(*k);
+            if (frequentSets.find(scopy) == frequentSets.end()) {
+                flag = false;
+                break;
+            } 
+        }
+        if (flag) {
+            candidateSets.insert(s);
+        }
     }
+    return candidateSets;
 }
 
 set<set<int>> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh, int& totalTransactions) {
