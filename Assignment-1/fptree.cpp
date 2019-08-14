@@ -16,7 +16,7 @@ struct Node{
 	}
 };
 
-unordered_map<int, int> itmesMap;
+unordered_map<int, int> itemsMap;
 
 // Scan transaction DB and return unordered map of itemID to frequency
 void getFlist(ifstream& file){
@@ -48,24 +48,22 @@ class cmp{
     }
 };
 
-struct LinkNode{
-	int label;
-	Node* firstLink;
-	Node* lastLink;
-	LinkNode(int l, Node* fl, Node* ll){
-		this->label = l;
-		this->firstLink = fl;
-		this->lastLink = ll;
-	}
-};
-
 class Tree{
 public:
 	Node* root;
-	unordered_map<int, LinkNode> pointersTo;
+	vector<vector<Node*>> pointerTable;
+	unordered_map<int, int> indexes;
+	int sizeOfPointers;
 
 	Tree(){
 		this->root = new Node(-1, -1); // NULL node
+		int i=0;
+		for(auto it: itemsMap){
+			indexes[it.first] = i;
+			i++; 
+		}
+		this->sizeOfPointers = i+1;
+		pointerTable.reserve(this->sizeOfPointers);
 	}
 
 	void insertInTree(Node* root, set<int, cmp>& trans, set<int>::iterator i){
@@ -81,6 +79,7 @@ public:
 
 		Node* newNode = new Node(trans.at(i), 1);
 		root->children.push_back(newNode);
+		vector[this->indexes[trans.at(i)]].push_back(newNode);
 		
 		insertInTree(newNode, trans, ++i);
 		return;
