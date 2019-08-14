@@ -7,6 +7,7 @@
 #include <sstream>
 #include <set>
 #include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 
@@ -41,7 +42,7 @@ struct cmp {
 
 
 // Takes candidate set as input, scans the whole transaction database, and returns frequencies
-set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>>& candidates) {
+set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>, cmp>& candidates) {
     set<pair<set<int>, int>, pcmp> frequencies;
     
     for (auto c: candidates) {
@@ -69,13 +70,13 @@ set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>>& 
             if (found) {
                 f.second++;
             }
-        }
+        }   
     }
     return frequencies;
 }
 
-// Generates candidate sets of k length given frequent sets of k-1 length
-set<set<int>, cmp> generateCandidates(set<set<int>>& frequentSets) {
+// // Generates candidate sets of k length given frequent sets of k-1 length
+set<set<int>, cmp> generateCandidates(set<set<int>, cmp>& frequentSets) {
     set<set<int>, cmp> candidateSets;
 
     for (set<set<int>>::iterator i = frequentSets.begin(); i != --frequentSets.end(); ++i) {
@@ -121,35 +122,85 @@ set<set<int>, cmp> generateCandidates(set<set<int>>& frequentSets) {
     return candidateSets;
 }
 
-set<set<int>> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh, int& totalTransactions) {
+set<set<int>, cmp> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh, int& totalTransactions) {
+    unordered_map<int, int> freqMap;
+    set<set<int>, cmp> f1;
 
-}
+    totalTransactions = 0;
+    string line;
+    while (getline(dataFile, line)) {
+        stringstream lineStream(line);
+        int itemId;
 
-vector<set<set<int>>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
-    int totalTransactions;
-    // for saving frequent sets, not saving their frequencies
-    vector<set<set<int>>> listOfF;
-    listOfF.push_back(frequentSet1Gen(dataFile, percentageSuppThresh, totalTransactions));
-    set<set<int>>& lastF = listOfF[0];
-
-    // loop check till Fk becomes empty
-    while(!lastF.empty()) {
-        // create pruned(check k-1 th set) candidates
-        set<set<int>> candidates = candidateGeneration(lastF);
-        // check thier frequencies
-        set<pair<set<int>, int>, decltype(pcmp)> frequenciesOfFreqSet = 
-        scanTransactionDB(dataFile, candidates);
-        // remove infrequent
-        for (auto setAndFreq: frequenciesOfFreqSet) {
-            
+        while (lineStream >> itemId) {
+            auto it = freqMap.find(itemId);
+            if (it!=freqMap.end()) {
+                it->second += 1;
+            } else {
+                freqMap.insert(make_pair(itemId, 1));
+            }
+        }
+        totalTransactions++;
+    }
+    int suppThresh = (percentageSuppThresh*totalTransactions)/100;
+    for (auto it=freqMap.begin(); it!=freqMap.end(); it++) {
+        if (suppThresh <= it->second) {
+            set<int> s;
+            s.insert(it->first);
+            // because set of set
+            f1.insert(s);
         }
     }
+    return f1;
+}
+
+vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
+    int totalTransactions;
+    // for saving frequent sets, not saving their frequencies
+    vector<set<set<int>, cmp>> listOfF;
+    listOfF.push_back(frequentSet1Gen(dataFile, percentageSuppThresh, totalTransactions));
+    int suppThresh = (percentageSuppThresh*totalTransactions)/100;
+
+    int k = 0;
+    // loop check till Fk becomes empty
+    while(!listOfF[k].empty()) {
+        // create pruned(check k-1 th set) candidates
+        set<set<int>, cmp> candidates = generateCandidates(listOfF[k]);
+        // check thier frequencies
+        set<pair<set<int>, int>, pcmp> frequenciesOfFreqSet = 
+        scanTransactionDB(dataFile, candidates);
+        // remove infrequent
+        for (auto itemAndFreq: frequenciesOfFreqSet) {
+            if (itemAndFreq.second < suppThresh) {
+                // TODO: may cause error
+                candidates.erase(itemAndFreq.first);
+            }
+        }
+        listOfF.push_back(candidates);
+        k++;
+    }
+    dataFile.close();
+    return listOfF;
 }
 
 int main(int argc, char* argv[]) {
     // argv[] = datafile outputfile support_threshold
     ifstream dataFile;
     dataFile.open(argv[1]);
-    aprioriAlgorithm(dataFile, (int) argv[3]);
+    vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atoi(argv[3]));
+    ofstream outFile;
+    outFile.open(argv[2]);
+    for (auto f:listOfF) {
+        for (auto itemSets: f) {
+            for (auto it=itemSets.begin(); it!=itemSets.end(); it++) {
+                outFile << *it;
+                if (it != itemSets.end()--) {
+                    outFile << " ";
+                }
+            }
+            outFile << '\n';
+        }
+    }
+    outFile.close();
     return 0;
 }
