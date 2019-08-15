@@ -34,3 +34,6 @@
 # IntelliJ IDE files
 **/.idea
 **/.vscode
+
+# Data files
+**/*.dat
