@@ -27,6 +27,21 @@ bool cmpFunc (const set<int>& a, const set<int>& b) {
     return false;
 }
 
+bool eqlFunc (const set<int>& a, const set<int>& b) {
+    set<int>::iterator begin1 = a.begin();
+    set<int>::iterator begin2 = b.begin();
+    set<int>::iterator end1 = a.end();
+    set<int>::iterator end2 = b.end();
+    set<int>::iterator i1;
+    set<int>::iterator i2;
+    for (i1 = begin1, i2 = begin2; (i1 != end1) && (i2 != end2); ++i1, ++i2) {
+        if (*i1 != *i2) {
+            return false;
+        }
+    }
+    return true;
+}
+
 struct pcmp {
     bool operator() (const pair<set<int>, int>& a, const pair<set<int>, int>& b) const {
         return cmpFunc(a.first, b.first);
@@ -42,12 +57,10 @@ struct cmp {
 
 
 // Takes candidate set as input, scans the whole transaction database, and returns frequencies
-set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>, cmp>& candidates) {
-    set<pair<set<int>, int>, pcmp> frequencies;
-    
-    for (auto c: candidates) {
-        frequencies.insert(make_pair(c, 0));
-    }
+vector<int> scanTransactionDB(ifstream& file, set<set<int>, cmp>& candidates) {
+    vector<int> frequencies(candidates.size());
+    file.clear();
+    file.seekg(0, ios::beg);
 
     string line;
     while (getline(file, line)) {
@@ -58,66 +71,66 @@ set<pair<set<int>, int>, pcmp> scanTransactionDB(ifstream& file, set<set<int>, c
         while (lineStream >> value) {
             items.insert(value);
         }
-
-        for (auto f: frequencies) {
+        int i = 0;
+        for (set<int> c: candidates) {
             bool found = true;
-            for (int item: f.first) {
-                if (items.find(item) != items.end()) {
+            for (int item: c) {
+                if (items.find(item) == items.end()) {
                     found = false;
                     break;
                 }
             }
-            if (found) {
-                f.second++;
-            }
-        }   
+            if (found) { frequencies[i]++; }
+            i++;
+        }
     }
     return frequencies;
 }
 
-// // Generates candidate sets of k length given frequent sets of k-1 length
+// Generates candidate sets of k length given frequent sets of k-1 length
 set<set<int>, cmp> generateCandidates(set<set<int>, cmp>& frequentSets) {
     set<set<int>, cmp> candidateSets;
+    int index = 0;
+    set<set<int>>::iterator it1;
+    set<set<int>>::iterator it2 = ++frequentSets.begin();
 
-    for (set<set<int>>::iterator i = frequentSets.begin(); i != --frequentSets.end(); ++i) {
-        set<int> s1 = *i;
-        set<set<int>>::iterator j = i;
-        set<int> s2 = *(++j);
-        set<int> s;
-        
-        // bool flag = true;
-        // set<int>::iterator begin1 = s1.begin();
-        // set<int>::iterator begin2 = s2.begin();
-        // set<int>::iterator end1 = --s1.end();
-        // set<int>::iterator end2 = --s2.end();
-        // set<int>::iterator i1;
-        // set<int>::iterator i2;
-        // for (i1 = begin1, i2 = begin2; (i1 != end1) && (i2 != end2); ++i1, ++i2) {
-        //     if (*i1 != *i2) {
-        //         flag = false;
-        //         break;
-        //     }
-        // }
-        bool flag = equal(s1.begin(), --s1.end(), s2.begin());
-        if (!flag) { continue; }
-
-        int size = s1.size();
-        for (auto m: s2) { s.insert(m); }
-        s.insert(*s2.rbegin());
-        
-        flag = true;
-        for (set<int>::iterator k = s.begin(); k != s.end(); ++k) {
-            set<int> scopy;
-            for (auto m: s) { scopy.insert(m); }
-            scopy.erase(*k);
-            if (frequentSets.find(scopy) == frequentSets.end()) {
-                flag = false;
+    for (it1 = frequentSets.begin(); it1 != frequentSets.end(); ++it1) {
+        it2 = frequentSets.begin();
+        advance(it2, index+1);
+        while (it2 != frequentSets.end()) {
+            set<int> s1 = *it1;
+            set<int> s2 = *it2;
+            set<int> s;
+            bool flag = equal(s1.begin(), --s1.end(), s2.begin());
+            if (!flag) {
                 break;
-            } 
+            }
+            int size = s1.size();
+            for (auto m: s1) { s.insert(m); }
+            s.insert(*s2.rbegin());
+            flag = true;
+            for (set<int>::iterator k = s.begin(); k != s.end(); ++k) {
+                set<int> scopy;
+                for (auto m: s) { 
+                    if (m!=*k) { scopy.insert(m); }
+                }
+                bool found = false;
+                for(auto freq: frequentSets){
+                    if(eqlFunc(freq, scopy)){
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    flag = false;
+                }
+            }
+            if (flag) {
+                candidateSets.insert(s);
+            }
+            ++it2;
         }
-        if (flag) {
-            candidateSets.insert(s);
-        }
+        index++;
     }
     return candidateSets;
 }
@@ -166,17 +179,18 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSu
     while(!listOfF[k].empty()) {
         // create pruned(check k-1 th set) candidates
         set<set<int>, cmp> candidates = generateCandidates(listOfF[k]);
-        // check thier frequencies
-        set<pair<set<int>, int>, pcmp> frequenciesOfFreqSet = 
-        scanTransactionDB(dataFile, candidates);
+        // check their frequencies
+        vector<int> frequenciesOfFreqSet = scanTransactionDB(dataFile, candidates);
         // remove infrequent
-        for (auto itemAndFreq: frequenciesOfFreqSet) {
-            if (itemAndFreq.second < suppThresh) {
-                // TODO: may cause error
-                candidates.erase(itemAndFreq.first);
+        set<set<int>, cmp> afterPruning;
+        int i = 0;
+        for (auto cand: candidates) {
+            if (frequenciesOfFreqSet[i] >= suppThresh) {
+                afterPruning.insert(cand);
             }
+            i++;
         }
-        listOfF.push_back(candidates);
+        listOfF.push_back(afterPruning);
         k++;
     }
     dataFile.close();
@@ -184,7 +198,6 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSu
 }
 
 int main(int argc, char* argv[]) {
-    // argv[] = datafile outputfile support_threshold
     ifstream dataFile;
     dataFile.open(argv[1]);
     vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atoi(argv[3]));
@@ -192,13 +205,13 @@ int main(int argc, char* argv[]) {
     outFile.open(argv[2]);
     for (auto f:listOfF) {
         for (auto itemSets: f) {
-            for (auto it=itemSets.begin(); it!=itemSets.end(); it++) {
-                outFile << *it;
-                if (it != itemSets.end()--) {
+            for (auto item: itemSets) {
+                outFile << item;
+                if (item != *itemSets.rbegin()) {
                     outFile << " ";
                 }
             }
-            outFile << '\n';
+            outFile << endl;
         }
     }
     outFile.close();
