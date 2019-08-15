@@ -1,4 +1,5 @@
-# Plots
+#!/bin/python3
+
 import sys
 import datetime
 
@@ -14,20 +15,17 @@ time = {'apriori': [], 'fptree': []}
 
 for x in percentageSupports:
 	start = datetime.datetime.now()
-	subprocess.call(['./2016CS50400.sh', filename, int(x), '-apriori', 'out1'])
+	subprocess.call(['./2016CS50400.sh', filename, str(x), '-apriori', 'out1'])
 
 	end = datetime.datetime.now()
 	time['apriori'].append((end-start).total_seconds())
-	# time is in milliseconds
 	
 	start = datetime.datetime.now()
-	subprocess.call(['./2016CS50400.sh', filename, int(x), '-fptree', 'out1'])
+	subprocess.call(['./2016CS50400.sh', filename, str(x), '-fptree', 'out1'])
 	
 	end = datetime.datetime.now()
 	time['fptree'].append((end-start).total_seconds())
-	# time is in milliseconds
 
-# plots
 plt.xlabel("X-axis: Percent support threshold")
 plt.ylabel("Y-axis: Algorithm execution time")
 plt.title("Plot")

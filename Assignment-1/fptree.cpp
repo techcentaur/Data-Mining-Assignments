@@ -1,6 +1,5 @@
 // FP-tree implementation
 
-// #include <bits/stdc++.h>
 #include<iostream>
 #include<fstream>
 #include<set>
@@ -16,14 +15,10 @@ struct Node{
 	vector<Node*> children;
 	Node* parent;
 	
-	bool isActive; // 1 to use only these prefixes
-	int activeFreq;
-
 	Node(int l, int c, Node* p){
 		this->label = l;
 		this->count = c;
 		this->parent = p;
-		this->isActive = false;
 	}
 };
 
@@ -32,7 +27,6 @@ unordered_map<int, int> itemsMap;
 // Scan transaction DB and return unordered map of itemID to frequency
 void getFlist(ifstream& file){
     string line;
-    // unordered_map<int, int> itemsMap;
     while (getline(file, line)){
         stringstream lineStream(line);
         int value;
@@ -69,21 +63,16 @@ public:
 	int sizeOfPointers;
 
 	Tree(){
-		this->root = new Node(-1, -1, NULL); // NULL node
+		this->root = new Node(-1, -1, NULL);  // NULL node
 		int i=0;
 		for(auto it: itemsMap){
 			vector<Node*> v;
 			// according to frequency
-			// cout<<it.first<<" "<<it.second<<endl;
 			this->indexes[it.first] = i;
 			this->pointerTable.push_back(v); 
 			i++;
 		}
-
 		this->sizeOfPointers = i;
-		cout<<"size of pointers: "<<this->sizeOfPointers<<endl;
-		cout<<"size of pointer table: "<<this->pointerTable.size()<<endl;
-		// this->pointerTable.reserve(this->sizeOfPointers);
 	}
 
 	void insertInTree(Node* root, set<int, cmp>& trans, set<int>::iterator i){
@@ -97,11 +86,9 @@ public:
 			}
 		}
 
-        // cout<<*i<<endl;
-		Node* newNode = new Node(*i, 1, root); // new Node: trans.at(i)->label, 1->freq, root->parent
+		Node* newNode = new Node(*i, 1, root);  // new Node: trans.at(i)->label, 1->freq, root->parent
 		root->children.push_back(newNode);
-		this->pointerTable[this->indexes[*i]].push_back(newNode); // put it in pointerTable
-        // while(true){}
+		this->pointerTable[this->indexes[*i]].push_back(newNode);  // put it in pointerTable
 		
 		insertInTree(newNode, trans, ++i);
 		return;
@@ -112,7 +99,11 @@ public:
 		cout<<"pointerTable: \n";
 		cout<<this->pointerTable.size()<<endl;
 		for(int i=0; i<pointerTable.size(); i++){
-			cout<<pointerTable[i].size()<<endl;
+			cout<<"Size: "<<pointerTable[i].size()<<endl;
+			cout<<"Label: "<<pointerTable[i][0]->label<<endl;
+			for(int j=0; j<pointerTable[i].size(); j++){
+				cout<<"L: "<<pointerTable[i][j]->label<<" C: "<<pointerTable[i][j]->count<<endl;
+			}
 		}
 		for(auto i: pointerTable){
 			for(int j=0; j<i.size(); j++){
@@ -142,68 +133,120 @@ Tree* plantTree(ifstream& file, int& dbSize){
         
         while (lineStream >> value){
             trans.insert(value);
-	        // cout<<value<<endl;
         }
-        // cout<<trans.size()<<endl;
-        // for(set<int>::iterator i1=trans.begin(); i1!=trans.end(); i1++){
-        // 	cout<<*i1<<", ";
-        // }
-        // cout<<endl;
-        // while(true){}
 
         set<int>::iterator it = trans.begin();
         greenWood->insertInTree(greenWood->root, trans, it);
 		dbSize++;
    }
-   // greenWood.printItOut();
    return greenWood;
 }
 
-void markPrefix(Node* n, bool reset, int activeFreq) {
-	if (!(n->label==-1)) {
-		if (reset) {
-			n->isActive = true;
-			n->activeFreq = activeFreq;
-		} else {
-			n->isActive = false;
-			n->activeFreq = n->count;
-		}
-		markPrefix(n->parent, activeFreq, reset);
-	}
-}
+vector<set<int>> anotherTraverse(int idx, Tree* t, const int& support, const int& whichLabel){
+	unordered_map<int, int> condCounter;
+	int currentIDCount = 0;
+	int currentIDLabel = whichLabel;
 
-// see if set not having cmp matter
-void getFrequentSets(Tree* t, set<int> a, int level, 
-int suppThresh, vector<set<int>>& minedItems, Node* curr){
-	if (level==0) {
-		// minedItems.push_back(a);
-		return;
-	}
-	if (a.empty()) {
-		int freq = 0;
-		for (Node* n: t->pointerTable[level]) {
-			freq += n->count;
-		}
-		if (freq>=suppThresh) {
-			for (Node* n: t->pointerTable[level]) {
-				markPrefix(n, true, freq);
-				set<int> s;
-				s.insert(n->label);
-				getFrequentSets(t, s, --level, suppThresh, minedItems, n->parent);
-				markPrefix(n, false, 0);
+	for(int i=0; i<t->pointerTable[idx].size(); i++){
+		Node* leaf = t->pointerTable[idx][i];
+		int currentIDInitialCount = leaf->count;
+
+		while(leaf->label!=-1){
+			if(leaf->label == whichLabel){
+				currentIDCount += currentIDInitialCount;
+				while(leaf->label != -1){
+					if(condCounter.find(leaf->label) != condCounter.end()){
+						condCounter[leaf->label] += currentIDInitialCount;
+					}else{
+						condCounter[leaf->label] = currentIDInitialCount;
+					}
+					leaf = leaf->parent;
+				}
+			}
+			else{
+				leaf = leaf->parent;
 			}
 		}
-	} else {
-		int freq = 0;
-		for (Node* n: t->pointerTable[level]) {
-			freq += n->count;
+	}
+
+	if(currentIDCount >= support){
+		vector<set<int>> v;
+		set<int> n;
+		n.insert(currentIDLabel);
+		v.push_back(n);
+
+		vector<int> freqLabels;
+		for(auto l: condCounter){
+			if((l.second >= support) && (l.first != currentIDLabel)){
+				freqLabels.push_back(l.first);
+			}
 		}
-		if (freq>=suppThresh) {
-			set<int> s;
-			s.insert(a.begin(), a.end());
-			s.insert(curr->label);
-			minedItems.push_back(s);
-			getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
+
+		for(int label: freqLabels){
+			vector<set<int>> tmp;
+			tmp = anotherTraverse(idx, t, support, label);
+			for(set<int> supertmp: tmp){
+				supertmp.insert(currentIDLabel);
+				v.push_back(supertmp);
+			}
+		}
+		return v;
+
+	}else{
+		vector<set<int>> vv;
+		return vv;
+	}
+
+}
+
+
+void traverse(int idx, Tree* t, const int& support, vector<set<int>>& freqsets){
+	unordered_map<int, int> condCounter;
+	int currentIDCount = 0;
+	int currentIDLabel = t->pointerTable[idx][0]->label;
+	for(int i=0; i<t->pointerTable[idx].size(); i++){
+		Node* leaf = t->pointerTable[idx][i];
+		int currentIDInitialCount = leaf->count;
+		currentIDCount += leaf->count;
+		while(leaf->label != -1){
+			if(condCounter.find(leaf->label) != condCounter.end()){
+				condCounter[leaf->label] += currentIDInitialCount;
+			}else{
+				condCounter[leaf->label] = currentIDInitialCount;
+			}
+			leaf = leaf->parent;
+		}
+	}
+
+	if(currentIDCount >= support){
+		set<int> n;
+		n.insert(currentIDLabel);
+		freqsets.push_back(n);
+
+		vector<int> freqLabels;
+		for(auto l: condCounter){
+			if((l.second >= support) && (l.first != currentIDLabel)){
+				freqLabels.push_back(l.first);
+			}
+		}
+
+		for(int label: freqLabels){
+			vector<set<int>> tmp;
+			tmp = anotherTraverse(idx, t, support, label);
+			for(set<int> supertmp: tmp){
+				supertmp.insert(currentIDLabel);
+				freqsets.push_back(supertmp);
+			}
+		}
+	}
+	return;
+}
+
+void getFrequentSets(vector<set<int>>& itemsets, int support, Tree* t){
+	int size = t->pointerTable.size();
+	for (int i=0; i<t->pointerTable.size(); i++){
+		if(t->pointerTable[i].size()>0){
+			traverse(i, t, support, itemsets);
 		}
 	}
 }
@@ -218,26 +261,22 @@ int main(int argc, char* argv[]){
 	dataFile.open(argv[1]);
 	int dbSize = 0;
 	Tree* t = plantTree(dataFile, dbSize);
-	// t->printItOut();
-	while(true){}
 	int suppThresh = (atof(argv[3])*dbSize)/100;
 	vector<set<int>> minedItemSets; 
-	for (int i=t->sizeOfPointers-1; i>=0; i--) {
-		set<int> s;
-		getFrequentSets(t, s, i, suppThresh, minedItemSets, NULL);
-	}
+	
+	getFrequentSets(minedItemSets, suppThresh, t);
 	dataFile.close();
 
 	ofstream outFile;
 	outFile.open(argv[2]);
 	for (set<int> freqSet: minedItemSets) {
 		for (auto it=freqSet.begin(); it!=freqSet.end(); it++) {
-			cout << *it;
+			outFile << *it;
 			if (it!=--freqSet.end()) {
-				cout << " ";
+				outFile << " ";
 			}
 		}
-		cout << endl;
+		outFile << endl;
 	}
 
 	return 0;
