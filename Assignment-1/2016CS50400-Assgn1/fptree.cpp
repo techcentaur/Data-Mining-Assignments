@@ -78,7 +78,7 @@ public:
 	void insertInTree(Node* root, set<int, cmp>& trans, set<int>::iterator i){
 		if(i == trans.end()){return;}
 
-		for(auto child: root->children){
+		for(auto& child: root->children){
 			if(child->label == *i){
 				child->count += 1;
 				insertInTree(child, trans, ++i);
@@ -105,7 +105,7 @@ public:
 				cout<<"L: "<<pointerTable[i][j]->label<<" C: "<<pointerTable[i][j]->count<<endl;
 			}
 		}
-		for(auto i: pointerTable){
+		for(auto& i: pointerTable){
 			for(int j=0; j<i.size(); j++){
 				cout<<"L: "<<i[j]->label<<" C: "<<i[j]->count<<", ";
 			}
@@ -176,7 +176,7 @@ vector<set<int>> anotherTraverse(int idx, Tree* t, const int& support, const int
 		v.push_back(n);
 
 		vector<int> freqLabels;
-		for(auto l: condCounter){
+		for(auto& l: condCounter){
 			if((l.second >= support) && (l.first != currentIDLabel)){
 				freqLabels.push_back(l.first);
 			}
@@ -185,7 +185,7 @@ vector<set<int>> anotherTraverse(int idx, Tree* t, const int& support, const int
 		for(int label: freqLabels){
 			vector<set<int>> tmp;
 			tmp = anotherTraverse(idx, t, support, label);
-			for(set<int> supertmp: tmp){
+			for(set<int>& supertmp: tmp){
 				supertmp.insert(currentIDLabel);
 				v.push_back(supertmp);
 			}
@@ -224,7 +224,7 @@ void traverse(int idx, Tree* t, const int& support, vector<set<int>>& freqsets){
 		freqsets.push_back(n);
 
 		vector<int> freqLabels;
-		for(auto l: condCounter){
+		for(auto& l: condCounter){
 			if((l.second >= support) && (l.first != currentIDLabel)){
 				freqLabels.push_back(l.first);
 			}
@@ -233,7 +233,7 @@ void traverse(int idx, Tree* t, const int& support, vector<set<int>>& freqsets){
 		for(int label: freqLabels){
 			vector<set<int>> tmp;
 			tmp = anotherTraverse(idx, t, support, label);
-			for(set<int> supertmp: tmp){
+			for(set<int>& supertmp: tmp){
 				supertmp.insert(currentIDLabel);
 				freqsets.push_back(supertmp);
 			}
@@ -256,9 +256,10 @@ int main(int argc, char* argv[]){
 	ifstream dataFile;
 	dataFile.open(argv[1]);
 	getFlist(dataFile);
-	dataFile.close();
 
-	dataFile.open(argv[1]);
+	dataFile.clear();
+    dataFile.seekg(0, ios::beg);
+
 	int dbSize = 0;
 	Tree* t = plantTree(dataFile, dbSize);
 	int suppThresh = (atof(argv[3])*dbSize)/100;
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]){
 
 	ofstream outFile;
 	outFile.open(argv[2]);
-	for (set<int> freqSet: minedItemSets) {
+	for (set<int>& freqSet: minedItemSets) {
 		for (auto it=freqSet.begin(); it!=freqSet.end(); it++) {
 			outFile << *it;
 			if (it!=--freqSet.end()) {

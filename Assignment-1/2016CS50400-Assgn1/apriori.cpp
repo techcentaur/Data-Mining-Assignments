@@ -106,16 +106,16 @@ set<set<int>, cmp> generateCandidates(set<set<int>, cmp>& frequentSets) {
                 break;
             }
             int size = s1.size();
-            for (auto m: s1) { s.insert(m); }
+            for (auto& m: s1) { s.insert(m); }
             s.insert(*s2.rbegin());
             flag = true;
             for (set<int>::iterator k = s.begin(); k != s.end(); ++k) {
                 set<int> scopy;
-                for (auto m: s) { 
+                for (auto& m: s) { 
                     if (m!=*k) { scopy.insert(m); }
                 }
                 bool found = false;
-                for(auto freq: frequentSets){
+                for(auto& freq: frequentSets){
                     if(eqlFunc(freq, scopy)){
                         found = true;
                         break;
@@ -184,7 +184,7 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, float percentage
         // remove infrequent
         set<set<int>, cmp> afterPruning;
         int i = 0;
-        for (auto cand: candidates) {
+        for (auto& cand: candidates) {
             if (frequenciesOfFreqSet[i] >= suppThresh) {
                 afterPruning.insert(cand);
             }
@@ -204,9 +204,9 @@ int main(int argc, char* argv[]) {
     vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atof(argv[3]));
     ofstream outFile;
     outFile.open(argv[2]);
-    for (auto f:listOfF) {
-        for (auto itemSets: f) {
-            for (auto item: itemSets) {
+    for (auto& f:listOfF) {
+        for (auto& itemSets: f) {
+            for (auto& item: itemSets) {
                 outFile << item;
                 if (item != *itemSets.rbegin()) {
                     outFile << " ";
