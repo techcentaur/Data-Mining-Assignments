@@ -200,10 +200,9 @@ int suppThresh, vector<set<int>>& minedItems, Node* curr){
 			set<int> s;
 			s.insert(a.begin(), a.end());
 			s.insert(curr->label);
-			getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
 			minedItems.push_back(s);
+			getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
 		}
-			// minedItems.push_back(a);
 	}
 }
 
