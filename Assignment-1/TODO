@@ -1,3 +1,8 @@
 Aproiori:
     1. Optimizations
         1.1 pruning step, checking in F^k-1 using hashset instead of set
+        1.2 removing candidates according to threshold frequnecy can be done using iterator with same
+        offset to set(set, frequency) set(set)
+    2. Modification
+        2.1 Make support threshold float
+        2.2 Lexicographically arrange final output (required?)
