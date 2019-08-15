@@ -15,7 +15,8 @@ struct Node{
 	int label;
 	vector<Node*> children;
 	Node* parent;
-	int isActive; // 1 to use only these prefixes
+	bool isActive; // 1 to use only these prefixes
+	int activeFreq;
 
 	Node(int l, int c, Node* p){
 		this->label = l;
@@ -126,9 +127,10 @@ public:
 
 };
 
-Tree& plantTree(ifstream& file, int& dbSize){
+
+Tree* plantTree(ifstream& file, int& dbSize){
     string line;
-    Tree greenWood;
+	Tree* greenWood = new Tree();
 	dbSize = 0;
     
     while (getline(file, line)){
@@ -148,43 +150,58 @@ Tree& plantTree(ifstream& file, int& dbSize){
         // while(true){}
 
         set<int>::iterator it = trans.begin();
-        greenWood.insertInTree(greenWood.root, trans, it);
+        greenWood->insertInTree(greenWood->root, trans, it);
 		dbSize++;
    }
    // greenWood.printItOut();
    return greenWood;
 }
 
-void markPrefix(Node* n, int value) {
+void markPrefix(Node* n, bool reset, int activeFreq) {
 	if (!(n->label==-1)) {
-		n->isActive = value;
-		markPrefix(n->parent, value);
+		if (reset) {
+			n->isActive = true;
+			n->activeFreq = activeFreq;
+		} else {
+			n->isActive = false;
+			n->activeFreq = n->count;
+		}
+		markPrefix(n->parent, activeFreq, reset);
 	}
 }
 
 // see if set not having cmp matter
-void getFrequentSets(Tree& t, set<int> a, int level, 
+void getFrequentSets(Tree* t, set<int> a, int level, 
 int suppThresh, vector<set<int>>& minedItems, Node* curr){
 	if (level==-1) {
 		minedItems.push_back(a);
 		return;
 	}
 	if (a.empty()) {
-		for (Node* n: t.pointerTable[level]) {
-			if (n->count>=suppThresh) {
-				markPrefix(n, 1);
+		int freq = 0;
+		for (Node* n: t->pointerTable[level]) {
+			freq += n->count;
+		}
+		if (freq>=suppThresh) {
+			for (Node* n: t->pointerTable[level]) {
+				markPrefix(n, true, freq);
 				set<int> s;
 				s.insert(n->label);
-				// minedItems.push_back(s);
 				getFrequentSets(t, s, --level, suppThresh, minedItems, n->parent);
-				markPrefix(n, 0);
+				markPrefix(n, false, 0);
 			}
 		}
 	} else {
-		set<int> s;
-		s.insert(a.begin(), a.end());
-		s.insert(curr->label);
-		getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
+		int freq = 0;
+		for (Node* n: t->pointerTable[level]) {
+			freq += n->count;
+		}
+		if (freq>=suppThresh) {
+			set<int> s;
+			s.insert(a.begin(), a.end());
+			s.insert(curr->label);
+			getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
+		}
 		getFrequentSets(t, a,  --level, suppThresh, minedItems, curr->parent);
 	}
 }
@@ -196,14 +213,26 @@ int main(int argc, char* argv[]){
 	getFlist(dataFile);
 
 	int dbSize = 0;
-	Tree& t = plantTree(dataFile, dbSize);
+	Tree* t = plantTree(dataFile, dbSize);
 	int suppThresh = (atof(argv[3])*dbSize)/100;
 	vector<set<int>> minedItemSets; 
-	for (int i=t.sizeOfPointers-1; i>=0; i++) {
+	for (int i=t->sizeOfPointers-1; i>=0; i++) {
 		set<int> s;
 		getFrequentSets(t, s, i, suppThresh, minedItemSets, NULL);
 	}
 	dataFile.close();
+
+	ofstream outFile;
+	outFile.open(argv[2]);
+	for (set<int> freqSet: minedItemSets) {
+		for (auto it=freqSet.begin(); it!=freqSet.end(); it++) {
+			cout << *it;
+			if (it!=--freqSet.end()) {
+				cout << " ";
+			}
+		}
+		cout << endl;
+	}
 
 	return 0;
 }
