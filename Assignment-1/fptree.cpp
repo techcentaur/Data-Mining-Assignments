@@ -1,6 +1,6 @@
 // FP-tree implementation
 
-#include <bits/stdc++.h>
+// #include <bits/stdc++.h>
 #include<iostream>
 #include<fstream>
 #include<set>
@@ -15,6 +15,7 @@ struct Node{
 	int label;
 	vector<Node*> children;
 	Node* parent;
+	int isActive; // 1 to use only these prefixes
 
 	Node(int l, int c, Node* p){
 		this->label = l;
@@ -125,9 +126,10 @@ public:
 
 };
 
-void plantTree(ifstream& file){
+Tree& plantTree(ifstream& file, int& dbSize){
     string line;
     Tree greenWood;
+	dbSize = 0;
     
     while (getline(file, line)){
         stringstream lineStream(line);
@@ -147,26 +149,61 @@ void plantTree(ifstream& file){
 
         set<int>::iterator it = trans.begin();
         greenWood.insertInTree(greenWood.root, trans, it);
+		dbSize++;
    }
    // greenWood.printItOut();
+   return greenWood;
 }
 
-
-void getFrequentSets(Tree& t){
-
+void markPrefix(Node* n, int value) {
+	if (!(n->label==-1)) {
+		n->isActive = value;
+		markPrefix(n->parent, value);
+	}
 }
 
-int main(){
-	string s = "./values.dat";
+// see if set not having cmp matter
+void getFrequentSets(Tree& t, set<int> a, int level, 
+int suppThresh, vector<set<int>>& minedItems, Node* curr){
+	if (level==-1) {
+		minedItems.push_back(a);
+		return;
+	}
+	if (a.empty()) {
+		for (Node* n: t.pointerTable[level]) {
+			if (n->count>=suppThresh) {
+				markPrefix(n, 1);
+				set<int> s;
+				s.insert(n->label);
+				// minedItems.push_back(s);
+				getFrequentSets(t, s, --level, suppThresh, minedItems, n->parent);
+				markPrefix(n, 0);
+			}
+		}
+	} else {
+		set<int> s;
+		s.insert(a.begin(), a.end());
+		s.insert(curr->label);
+		getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
+		getFrequentSets(t, a,  --level, suppThresh, minedItems, curr->parent);
+	}
+}
 
-	ifstream file;
-	file.open(s);
-	getFlist(file);
-	file.close();
+int main(int argc, char* argv[]){
+	// argv[] = dataFile outFile percentageThresh
+	ifstream dataFile;
+	dataFile.open(argv[1]);
+	getFlist(dataFile);
 
-	file.open(s);
-	plantTree(file);
-	file.close();
+	int dbSize = 0;
+	Tree& t = plantTree(dataFile, dbSize);
+	int suppThresh = (atof(argv[3])*dbSize)/100;
+	vector<set<int>> minedItemSets; 
+	for (int i=t.sizeOfPointers-1; i>=0; i++) {
+		set<int> s;
+		getFrequentSets(t, s, i, suppThresh, minedItemSets, NULL);
+	}
+	dataFile.close();
 
 	return 0;
 }
