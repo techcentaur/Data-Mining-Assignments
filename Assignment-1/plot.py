@@ -31,6 +31,7 @@ for x in percentageSupports:
 plt.xlabel("X-axis: Percent support threshold")
 plt.ylabel("Y-axis: Algorithm execution time")
 plt.title("Plot")
+plt.savefig("compare-plots.png")
 
 for key in time:
 	plt.plot(percentageSupports, time[key], label='Algo: {}'.format(key))
