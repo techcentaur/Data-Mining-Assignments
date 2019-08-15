@@ -15,6 +15,7 @@ struct Node{
 	int label;
 	vector<Node*> children;
 	Node* parent;
+	
 	bool isActive; // 1 to use only these prefixes
 	int activeFreq;
 
@@ -22,6 +23,7 @@ struct Node{
 		this->label = l;
 		this->count = c;
 		this->parent = p;
+		this->isActive = false;
 	}
 };
 
@@ -79,8 +81,8 @@ public:
 		}
 
 		this->sizeOfPointers = i;
-		// cout<<"size of pointers: "<<this->sizeOfPointers<<endl;
-		// cout<<"size of pointer table: "<<this->pointerTable.size()<<endl;
+		cout<<"size of pointers: "<<this->sizeOfPointers<<endl;
+		cout<<"size of pointer table: "<<this->pointerTable.size()<<endl;
 		// this->pointerTable.reserve(this->sizeOfPointers);
 	}
 
@@ -109,9 +111,9 @@ public:
 		cout<<"Root: "<<root->label<<endl;
 		cout<<"pointerTable: \n";
 		cout<<this->pointerTable.size()<<endl;
-		// for(int i=0; i<pointerTable.size(); i++){
-		// 	cout<<pointerTable[i].size()<<endl;
-		// }
+		for(int i=0; i<pointerTable.size(); i++){
+			cout<<pointerTable[i].size()<<endl;
+		}
 		for(auto i: pointerTable){
 			for(int j=0; j<i.size(); j++){
 				cout<<"L: "<<i[j]->label<<" C: "<<i[j]->count<<", ";
@@ -211,9 +213,13 @@ int main(int argc, char* argv[]){
 	ifstream dataFile;
 	dataFile.open(argv[1]);
 	getFlist(dataFile);
+	dataFile.close();
 
+	dataFile.open(argv[1]);
 	int dbSize = 0;
 	Tree* t = plantTree(dataFile, dbSize);
+	// t->printItOut();
+	while(true){}
 	int suppThresh = (atof(argv[3])*dbSize)/100;
 	vector<set<int>> minedItemSets; 
 	for (int i=t->sizeOfPointers-1; i>=0; i--) {
