@@ -158,60 +158,65 @@ Tree* plantTree(ifstream& file, int& dbSize){
    return greenWood;
 }
 
-vector<vector<int>> anotherTraverse(int idx, Tree* t, const int& support, const int& whichLabel){
+vector<set<int>> anotherTraverse(int idx, Tree* t, const int& support, const int& whichLabel){
 	unordered_map<int, int> condCounter;
 	int currentIDCount = 0;
 	int currentIDLabel = whichLabel;
 
 	for(int i=0; i<t->pointerTable[idx].size(); i++){
 		Node* leaf = t->pointerTable[idx][i];
-		if(leaf->label != whichLabel){
-			int currentIDInitialCount = leaf->count;
-			currentIDCount += currentIDInitialCount;
-			while(leaf != NULL){
-				if(condCounter.find(leaf->label) != condCounter.end()){
-					condCounter[leaf->label] += currentIDInitialCount;
-				}else{
-					condCounter[leaf->label] = currentIDInitialCount;
+		int currentIDInitialCount = leaf->count;
+
+		while(leaf->label!=-1){
+			if(leaf->label == whichLabel){
+				currentIDCount += currentIDInitialCount;
+				while(leaf->label != -1){
+					if(condCounter.find(leaf->label) != condCounter.end()){
+						condCounter[leaf->label] += currentIDInitialCount;
+					}else{
+						condCounter[leaf->label] = currentIDInitialCount;
+					}
+					leaf = leaf->parent;
 				}
+			}
+			else{
 				leaf = leaf->parent;
 			}
-		}
-		else{
-			leaf = leaf->parent;
 		}
 	}
 
 	if(currentIDCount >= support){
-		vector<vector<int>> v;
-		vector<int> n;
-		n.push_back(currentIDLabel);
+		vector<set<int>> v;
+		set<int> n;
+		n.insert(currentIDLabel);
 		v.push_back(n);
 
 		vector<int> freqLabels;
 		for(auto l: condCounter){
-			if(l.second >= support){freqLabels.push_back(l.first);}
+			if((l.second >= support) && (l.first != currentIDLabel)){
+				freqLabels.push_back(l.first);
+			}
 		}
 
 		for(int label: freqLabels){
-			vector<vector<int>> tmp;
+			vector<set<int>> tmp;
 			tmp = anotherTraverse(idx, t, support, label);
-			for(vector<int> supertmp: tmp){
-				supertmp.push_back(currentIDLabel);
+			for(set<int> supertmp: tmp){
+				supertmp.insert(currentIDLabel);
 				v.push_back(supertmp);
 			}
 		}
 		return v;
 
 	}else{
-		vector<vector<int>> vv;
+		vector<set<int>> vv;
 		return vv;
 	}
 
 }
 
 
-void traverse(int idx, Tree* t, const int& support, vector<vector<int>>& freqsets){
+void traverse(int idx, Tree* t, const int& support, vector<set<int>>& freqsets){
 	unordered_map<int, int> condCounter;
 	int currentIDCount = 0;
 	int currentIDLabel = t->pointerTable[idx][0]->label;
@@ -219,7 +224,7 @@ void traverse(int idx, Tree* t, const int& support, vector<vector<int>>& freqset
 		Node* leaf = t->pointerTable[idx][i];
 		int currentIDInitialCount = leaf->count;
 		currentIDCount += leaf->count;
-		while(leaf != NULL){
+		while(leaf->label != -1){
 			if(condCounter.find(leaf->label) != condCounter.end()){
 				condCounter[leaf->label] += currentIDInitialCount;
 			}else{
@@ -230,20 +235,22 @@ void traverse(int idx, Tree* t, const int& support, vector<vector<int>>& freqset
 	}
 
 	if(currentIDCount >= support){
-		vector<int> n;
-		n.push_back(currentIDLabel);
+		set<int> n;
+		n.insert(currentIDLabel);
 		freqsets.push_back(n);
 
 		vector<int> freqLabels;
 		for(auto l: condCounter){
-			if(l.second >= support){freqLabels.push_back(l.first);}
+			if((l.second >= support) && (l.first != currentIDLabel)){
+				freqLabels.push_back(l.first);
+			}
 		}
 
 		for(int label: freqLabels){
-			vector<vector<int>> tmp;
+			vector<set<int>> tmp;
 			tmp = anotherTraverse(idx, t, support, label);
-			for(vector<int> supertmp: tmp){
-				supertmp.push_back(currentIDLabel);
+			for(set<int> supertmp: tmp){
+				supertmp.insert(currentIDLabel);
 				freqsets.push_back(supertmp);
 			}
 		}
@@ -251,19 +258,19 @@ void traverse(int idx, Tree* t, const int& support, vector<vector<int>>& freqset
 	return;
 }
 
-void getFrequentSets(vector<vector<int>>& itemsets, int support, Tree* t){
+void getFrequentSets(vector<set<int>>& itemsets, int support, Tree* t){
 	int size = t->pointerTable.size();
 	for (int i=0; i<t->pointerTable.size(); i++){
-		cout<<"Size of pTable value: "<<t->pointerTable[size-1-i].size()<<endl;
-		if(t->pointerTable[size-1-i].size()>0){
-			cout<<"For this label "<<t->pointerTable[size-1-i][0]->label<<endl;
-			traverse(size-1-i, t, support, itemsets);
+		// cout<<"Size of pTable value: "<<t->pointerTable[i].size()<<endl;
+		if(t->pointerTable[i].size()>0){
+			// cout<<"For this label "<<t->pointerTable[i][0]->label<<endl;
+			traverse(i, t, support, itemsets);
 		}
-		for(vector<int> vvv: itemsets){
-			for(int tmpv: vvv){cout<<tmpv<<" ";}
-			cout<<endl;
-		}
-		while(true){}
+		// for(set<int> vvv: itemsets){
+			// for(int tmpv: vvv){cout<<tmpv<<" ";}
+			// cout<<endl;
+		// }
+		// while(true){}
 	}
 }
 
@@ -276,7 +283,7 @@ int main(int argc, char* argv[]){
 
 	// for(auto aut: itemsMap){
 	// 	cout<<aut.first<<" "<<aut.second<<endl;
-	// }
+	// ree}
 
 	dataFile.open(argv[1]);
 	int dbSize = 0;
@@ -284,23 +291,23 @@ int main(int argc, char* argv[]){
 	// t->printItOut();
 	// while(true){}
 	int suppThresh = (atof(argv[3])*dbSize)/100;
-	vector<vector<int>> minedItemSets; 
+	vector<set<int>> minedItemSets; 
 	
 	getFrequentSets(minedItemSets, suppThresh, t);
 	dataFile.close();
 
-	while(true){}
-	// ofstream outFile;
-	// outFile.open(argv[2]);
-	// for (set<int> freqSet: minedItemSets) {
-	// 	for (auto it=freqSet.begin(); it!=freqSet.end(); it++) {
-	// 		cout << *it;
-	// 		if (it!=--freqSet.end()) {
-	// 			cout << " ";
-	// 		}
-	// 	}
-	// 	cout << endl;
-	// }
+	// while(true){}
+	ofstream outFile;
+	outFile.open(argv[2]);
+	for (set<int> freqSet: minedItemSets) {
+		for (auto it=freqSet.begin(); it!=freqSet.end(); it++) {
+			outFile << *it;
+			if (it!=--freqSet.end()) {
+				outFile << " ";
+			}
+		}
+		outFile << endl;
+	}
 
 	return 0;
 }
