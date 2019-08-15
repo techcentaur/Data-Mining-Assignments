@@ -167,12 +167,12 @@ set<set<int>, cmp> frequentSet1Gen(ifstream& dataFile, int percentageSuppThresh,
     return f1;
 }
 
-vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSuppThresh) {
+vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, float percentageSuppThresh) {
     int totalTransactions;
     // for saving frequent sets, not saving their frequencies
     vector<set<set<int>, cmp>> listOfF;
     listOfF.push_back(frequentSet1Gen(dataFile, percentageSuppThresh, totalTransactions));
-    int suppThresh = (percentageSuppThresh*totalTransactions)/100;
+    int suppThresh = (int) ((percentageSuppThresh * totalTransactions) / 100.0);
 
     int k = 0;
     // loop check till Fk becomes empty
@@ -198,9 +198,10 @@ vector<set<set<int>, cmp>> aprioriAlgorithm(ifstream& dataFile, int percentageSu
 }
 
 int main(int argc, char* argv[]) {
+    // a.out datafile outputfile support
     ifstream dataFile;
     dataFile.open(argv[1]);
-    vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atoi(argv[3]));
+    vector<set<set<int>, cmp>> listOfF = aprioriAlgorithm(dataFile, atof(argv[3]));
     ofstream outFile;
     outFile.open(argv[2]);
     for (auto f:listOfF) {
