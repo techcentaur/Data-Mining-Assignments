@@ -173,8 +173,8 @@ void markPrefix(Node* n, bool reset, int activeFreq) {
 // see if set not having cmp matter
 void getFrequentSets(Tree* t, set<int> a, int level, 
 int suppThresh, vector<set<int>>& minedItems, Node* curr){
-	if (level==-1) {
-		minedItems.push_back(a);
+	if (level==0) {
+		// minedItems.push_back(a);
 		return;
 	}
 	if (a.empty()) {
@@ -201,8 +201,9 @@ int suppThresh, vector<set<int>>& minedItems, Node* curr){
 			s.insert(a.begin(), a.end());
 			s.insert(curr->label);
 			getFrequentSets(t, s, --level, suppThresh, minedItems, curr->parent);
+			minedItems.push_back(s);
 		}
-		getFrequentSets(t, a,  --level, suppThresh, minedItems, curr->parent);
+			// minedItems.push_back(a);
 	}
 }
 
@@ -216,7 +217,7 @@ int main(int argc, char* argv[]){
 	Tree* t = plantTree(dataFile, dbSize);
 	int suppThresh = (atof(argv[3])*dbSize)/100;
 	vector<set<int>> minedItemSets; 
-	for (int i=t->sizeOfPointers-1; i>=0; i++) {
+	for (int i=t->sizeOfPointers-1; i>=0; i--) {
 		set<int> s;
 		getFrequentSets(t, s, i, suppThresh, minedItemSets, NULL);
 	}
