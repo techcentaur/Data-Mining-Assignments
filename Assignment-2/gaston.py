@@ -102,4 +102,4 @@ def change_file_format_for_GASTON(filepath, outfile=None, verbose=False):
 if __name__ == '__main__':
 
 	file = "./Yeast/smol.txt_graph"
-	change_file_format_for_GASTON(file, verbose=True)
+	change_file_format_for_GASTON(file, verbose=False)
