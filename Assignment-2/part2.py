@@ -44,3 +44,10 @@ if __name__ == '__main__':
 			fv+=1
 
 	print(fvectors)
+
+
+	# 1. For a query graph q, read the file, "./Yeash/pafi_smol.fp" and see which are the frequent-graph
+	# are a subgraph of q -> make a feature vector for q 
+	# 2. Search in fvectors and see which are the graphs (indices) which contains the feature vector for q
+	# Do this till
+
