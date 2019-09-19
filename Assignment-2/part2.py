@@ -24,6 +24,9 @@ def get_no_of_fpatterns(filename):
     n = int(((a.decode("utf-8")).split("\n")[0]).split()[-1])
     return n
 
+# input: frequent pattern (fp) filename/path that contains frequent subgraphs
+# output: list of Graph DS (Graphs corresponding to frequent subgraphs)
+
 
 def get_freq_sub_graph(filename):
     # g = Graph(directed=)
@@ -54,6 +57,8 @@ def get_freq_sub_graph(filename):
 
 	return freq_sg_list
 
+# similar to get_freq_sub_graph, read query graphs converts the to Graph DS saves them in a list
+
 
 def get_query_graphs(filename):
 	outfilepath = pafi.change_format(
@@ -81,13 +86,26 @@ def get_query_graphs(filename):
 
         return qg_list
 
-
+# makes feature vectors for query graphs
+# input: q_gs = query graph list, f_sgs = frequent subgraphs list
+# output: 2d array i th row contains feature vector of ith query graph
 def index_query_graphs(q_gs, f_sgs):
+	fvectors = np.zeros((len(q_gs), len(f_sgs)))
+	fv = 0
+	for f_sg in f_sgs:
+		qv = 0
+		for q_g in q_gs:
+			vl = np.concatenate(f_sg.vertex_properties["molecule"].get_array(), q_g.vertex_properties["molecule"].get_array())
+        	el = np.concatenate(f_sg.vertex_properties["bond"].get_array(), q_g.vertex_properties["bond"].get_array())
+			# subgraph isomorphisms return list of maps, i.e we check for empty if not a subgraph
+			# check subgraph parameter in function below 
+			if len(graph_tool.topology.subgraph_isomorphism(
+            	sub, g, max_n=1, vertex_label=vl, edge_label=vl, induced=True, subgraph=False, generator=False)) > 0:
+				fvectors[qv][fv] = 1
+			qv += 1
+		fv += 1
 
-    for q_g in q_gs:
-		
-        graph_tool.topology.subgraph_isomorphism(
-            sub, g, max_n=1, vertex_label=None, edge_label=None, induced=False, subgraph=True, generator=False)
+	return fvectors
 
 
 if __name__ == '__main__':
