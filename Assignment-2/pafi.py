@@ -47,7 +47,7 @@ def change_format(filepath, outfile=None, verbose=False):
 				i+=1
 
 	if not outfile:
-		outfile = "./Yeast/pafi_{}".format(filepath.split("/")[-1])
+		outfile = "./pafi_{}".format(filepath.split("/")[-1])
 
 	with open(outfile, 'w') as f:
 		f.write(''.join(res))
