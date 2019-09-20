@@ -1,7 +1,7 @@
 """
 Converting from given format of dataset into PAFI format
 """
-
+import json
 
 def change_format(filepath, outfile=None, verbose=False):
 	"""change given format to pafi format"""
@@ -14,6 +14,9 @@ def change_format(filepath, outfile=None, verbose=False):
 		for line in f:
 			content.append(line)
 
+	enum = 0
+	mapping_ids = {}
+
 	res = []
 	i = 0
 
@@ -23,21 +26,24 @@ def change_format(filepath, outfile=None, verbose=False):
 			i += 1
 			continue
 
-		if content[i].startswith("#"):
+		if x.startswith("#"):
 			new_graph=True
 			res.append("t\n")
 			i += 1
+			mapping_ids[enum] = x[1:]
+			enum += 1
+
 		else:
 			if new_graph:
 				new_graph = False
-				numv = int(content[i])
+				numv = int(x)
 
 				for j in range(1, numv+1):
 					res.append("v {node} {label}".format(node=str(j-1), label=content[i+j]))
 				i = i+numv+1
 
 			elif not new_graph:
-				nume = int(content[i])
+				nume = int(x)
 				nume = int(nume)
 
 				for j in range(1, nume+1):
@@ -47,12 +53,20 @@ def change_format(filepath, outfile=None, verbose=False):
 				i+=1
 
 	if not outfile:
-		outfile = "./pafi_{}".format(filepath.split("/")[-1])
+		outfile = "./Yeast/pafi_{}".format(filepath.split("/")[-1])
 
 	with open(outfile, 'w') as f:
 		f.write(''.join(res))
 	if verbose:
 		print("[*] File saved in: {}".format(outfile))
+
+	# write mapping too
+	out = outfile.split("/")
+	out[-1] = "mapping_"+out[-1]
+	dictfile = "/".join(out)
+
+	with open(dictfile, 'w') as f:
+		f.write(json.dumps(mapping_ids))
 
 	return outfile
 
