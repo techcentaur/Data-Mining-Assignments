@@ -142,7 +142,7 @@ def get_map(filepath):
 
 if __name__ == '__main__':
     transaction_database = sys.argv[1]
-    support = 80.0
+    support = 72.0
 
     outfile, mapfile = pafi.change_format(transaction_database)
     FNULL = open(os.devnull, 'w')

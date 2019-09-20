@@ -36,7 +36,7 @@ for support in supports:
     time_consumed['GASTON'].append(time.time() - start)
     print(time_consumed, flush=True)
     
-
+    
     print('[*] Running algorithm: PAFI', flush=True)
     pafi.change_format(sys.argv[1])
     start = time.time()
