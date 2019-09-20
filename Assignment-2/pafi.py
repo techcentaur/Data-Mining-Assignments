@@ -53,17 +53,19 @@ def change_format(filepath, outfile=None, verbose=False):
 				i+=1
 
 	if not outfile:
-		outfile = "./Yeast/pafi_{}".format(filepath.split("/")[-1])
+		outfile = "pafi_{}".format(filepath.split("/")[-1])
 
 	with open(outfile, 'w') as f:
 		f.write(''.join(res))
 	if verbose:
 		print("[*] File saved in: {}".format(outfile))
 
-	with open("./Yeast/mapping.json", 'w') as f:
+	mapping_file = "mapping_{}".format(filepath.split("/")[-1])
+
+	with open(mapping_file, 'w') as f:
 		f.write(json.dumps(mapping_ids))
 
-	return "./Yeast/mapping.json"
+	return (outfile, mapping_file)
 
 if __name__ == '__main__':
 

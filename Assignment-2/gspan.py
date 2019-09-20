@@ -1,6 +1,6 @@
 import json
 
-def changeff(filepath, outfile=None, verbose=False):
+def change_format(filepath, outfile=None, verbose=False):
 	if verbose:
 		print("[*] Converting file: {} into Gaston format\n".format(filepath))
 
@@ -67,4 +67,4 @@ if __name__ == '__main__':
 
 	
 	file = "./Yeast/smol.txt_graph"
-	changeff(file, verbose=True)
+	change_format(file, verbose=True)

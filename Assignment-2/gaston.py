@@ -23,7 +23,7 @@ def shorten_dataset(count=100, outfile=None):
 	return outfile
 
 
-def change_file_format_for_GASTON(filepath, outfile=None, verbose=False):
+def change_format(filepath, outfile=None, verbose=False):
 	if verbose:
 		print("[*] Converting file: {} into Gaston format\n".format(filepath))
 
@@ -47,7 +47,7 @@ def change_file_format_for_GASTON(filepath, outfile=None, verbose=False):
 			new_graph=True
 
 			mapping_ids[content[i][1:-1]] = enum
-			res.append("# t {}\n".format(enum))
+			res.append("t # {}\n".format(enum))
 			enum += 1
 			i += 1
 		else:
@@ -102,4 +102,4 @@ def change_file_format_for_GASTON(filepath, outfile=None, verbose=False):
 if __name__ == '__main__':
 
 	file = "./Yeast/smol.txt_graph"
-	change_file_format_for_GASTON(file, verbose=False)
+	change_format(file, verbose=False)
