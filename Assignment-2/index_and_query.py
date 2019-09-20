@@ -4,6 +4,9 @@ import graph_tool.all as gt
 import pafi
 import json
 import ast
+import sys
+import os
+
 
 
 def get_no_of_graphs(filename):
@@ -26,17 +29,15 @@ def get_no_of_fpatterns(filename):
     n = int(((a.decode("utf-8")).split("\n")[0]).split()[-1])
     return n
 
+
 # input: frequent pattern (fp) filename/path that contains frequent subgraphs
 # output: list of Graph DS (Graphs corresponding to frequent subgraphs)
-
-
 def get_freq_sub_graph(filename):
     freq_sg_file = open(filename, "r")
 
     for _ in range(24):
         line = freq_sg_file.readline()
 
-    # numpy array?
     freq_sg_list = []
 
     g = None
@@ -59,15 +60,12 @@ def get_freq_sub_graph(filename):
     freq_sg_list.append(g)
     return freq_sg_list
 
+
 # similar to get_freq_sub_graph, read query graphs converts the to Graph DS saves them in a list
-
-
 def get_query_graphs(filename):
-    # filename = pafi.change_format(
-    #     filename, outfile="./Yeast/qout.txt_graph", verbose=False)
-    qg_file = open(filename, "r")
+    outfile, mapping = pafi.change_format(filename)
+    qg_file = open(outfile, "r")
 
-    # numpy array?
     qg_list = []
 
     g = None
@@ -97,15 +95,9 @@ def get_query_graphs(filename):
 def index_query_graphs(q_gs, f_sgs):
     fvectors = np.zeros((len(q_gs), len(f_sgs)))
     fv = 0
-    print(q_gs)
     for f_sg in f_sgs:
         qv = 0
         for q_g in q_gs:
-            # print("indexing")
-            # print(f_sg.vertex_properties["molecule"].get_2d_array())
-            # print(type(f_sg.vertex_properties["molecule"].get_2d_array()))
-            # vl = np.concatenate(f_sg.vertex_properties["molecule"].get_array(), q_g.vertex_properties["molecule"].get_array())
-            # el = np.concatenate(f_sg.vertex_properties["bond"].get_array(), q_g.vertex_properties["bond"].get_array())
             # subgraph isomorphisms return list of maps, i.e we check for empty if not a subgraph
             # check subgraph parameter in function below 
             if len(gt.subgraph_isomorphism(
@@ -114,13 +106,11 @@ def index_query_graphs(q_gs, f_sgs):
                 fvectors[qv][fv] = 1
             qv += 1
         fv += 1
-
     return fvectors
 
 
 def get_database_graph_objects(filename):
     qg_file = open(filename, "r")
-
     qg_list = []
 
     g = None
@@ -143,40 +133,46 @@ def get_database_graph_objects(filename):
     qg_list.append(g)
     return qg_list
 
+
 def get_map(filepath):
     fp = open(filepath, 'r')
     out = json.load(fp)
     return out
 
+
 if __name__ == '__main__':
-    # cmd = "./pafi-1.0.1/Linux/fsg -s 80.0 -t ./Yeast/pafi_smol.txt_graph"
-    # subprocess.call(cmd.split())
+    transaction_database = sys.argv[1]
+    support = 80.0
 
-    n_graphs = get_no_of_graphs("./Yeast/pafi_smol.fp")
-    # n_graphs = 100
-    n_fpatterns = get_no_of_fpatterns("./Yeast/pafi_smol.fp")
-    # n_fpatterns = 20
+    outfile, mapfile = pafi.change_format(transaction_database)
+    FNULL = open(os.devnull, 'w')
+    command = ['./pafi-1.0.1/Linux/fsg', '-s', str(support), '-t', outfile]
+    subprocess.call(command, stdout=FNULL, stderr=subprocess.STDOUT)
 
-    print("patterns", n_fpatterns)
-    print("graphs", n_graphs)
+    root_file = outfile.split('/')[-1].split('.')[0]
+    n_graphs = get_no_of_graphs(root_file + '.fp')
+    n_fpatterns = get_no_of_fpatterns(root_file + '.fp')
 
     fvectors = np.zeros((n_graphs, n_fpatterns))
 
-    with open("./Yeast/pafi_smol.tid", 'r') as file:
+    with open(root_file + '.tid', 'r') as file:
         fv = 0
         for line in file:
             vals = line.split()
-            # print(vals[0])
             for i in range(1, len(vals)):
                 fvectors[int(vals[i])][fv] = 1
             fv += 1
+        
+    print('Indexing complete', flush=True)
+    inp = input().split()
+    query, output_filename = inp[0], inp[1]
 
-    qgs = get_query_graphs("./Yeast/query.txt_graph")
-    fgs = get_freq_sub_graph("./Yeast/pafi_smol.fp")
+    qgs = get_query_graphs(query)
+    fgs = get_freq_sub_graph(root_file + '.fp')
     query_fvectors = index_query_graphs(qgs, fgs)
 
-    database_graphs = get_database_graph_objects("./Yeast/pafi_smol.txt_graph")
-    mapping = get_map("./Yeast/mapping.json")
+    database_graphs = get_database_graph_objects(outfile)
+    mapping = get_map(mapfile)
 
     result = {}
     for i in range(query_fvectors.shape[0]):
@@ -184,10 +180,12 @@ if __name__ == '__main__':
         for j in range(fvectors.shape[0]):
             if (np.all(query_fvectors[i]==np.logical_and(fvectors[j], query_fvectors[i]))):
                 x=gt.subgraph_isomorphism(
-                qgs[i], database_graphs[j], max_n=1, vertex_label=(qgs[i].vertex_properties["molecule"], database_graphs[j].vertex_properties["molecule"]), 
-                edge_label= (qgs[i].edge_properties["bond"], database_graphs[j].edge_properties["bond"]), induced=False, subgraph=True, generator=False)
+                qgs[i], database_graphs[j], max_n=1, vertex_label=(qgs[i].vertex_properties['molecule'], database_graphs[j].vertex_properties['molecule']), 
+                edge_label= (qgs[i].edge_properties['bond'], database_graphs[j].edge_properties['bond']), induced=False, subgraph=True, generator=False)
 
-                result[i].append(str(mapping[str(i)]))
-
-    print(result)
-    # result: for each query: in which trans id it is present
+                result[i].append(str(mapping[str(j)]))
+    
+    qs = len(result)
+    with open(output_filename, 'w') as f:
+        for i in range(qs):
+            f.write('\t'.join(result[i]) + '\n')
