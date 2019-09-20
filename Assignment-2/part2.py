@@ -1,8 +1,10 @@
 import subprocess
 import numpy as np
-# import graph_tool.all as gt
+import graph_tool.all as gt
 import pafi
 import json
+import ast
+
 
 def get_no_of_graphs(filename):
     c = 0
@@ -31,7 +33,7 @@ def get_no_of_fpatterns(filename):
 def get_freq_sub_graph(filename):
     freq_sg_file = open(filename, "r")
 
-    for _ in range(25):
+    for _ in range(24):
         line = freq_sg_file.readline()
 
     # numpy array?
@@ -52,23 +54,26 @@ def get_freq_sub_graph(filename):
         elif splited[0] == 'u':
             e = g.add_edge(
                 g.vertex(int(splited[1])), g.vertex(int(splited[2])))
-            g.vertex_properties["bond"][e] = int(splited[3])
+            g.edge_properties["bond"][e] = int(splited[3])
 
+    freq_sg_list.append(g)
     return freq_sg_list
 
 # similar to get_freq_sub_graph, read query graphs converts the to Graph DS saves them in a list
 
 
 def get_query_graphs(filename):
-    outfilepath = pafi.change_format(
-        filename, outfile="./something", verbose=False)
-    qg_file = open(outfilepath, "r")
+    # filename = pafi.change_format(
+    #     filename, outfile="./Yeast/qout.txt_graph", verbose=False)
+    qg_file = open(filename, "r")
 
     # numpy array?
     qg_list = []
 
     g = None
-    for line in freq_sg_file:
+    for line in qg_file:
+        splited = line.split()
+
         if splited[0] == 't':
             if g is not None:
                 qg_list.append(g)
@@ -81,8 +86,9 @@ def get_query_graphs(filename):
         elif splited[0] == 'u':
             e = g.add_edge(
                 g.vertex(int(splited[1])), g.vertex(int(splited[2])))
-            g.vertex_properties["bond"][e] = int(splited[3])
+            g.edge_properties["bond"][e] = int(splited[3])
 
+    qg_list.append(g)
     return qg_list
 
 # makes feature vectors for query graphs
@@ -91,15 +97,20 @@ def get_query_graphs(filename):
 def index_query_graphs(q_gs, f_sgs):
     fvectors = np.zeros((len(q_gs), len(f_sgs)))
     fv = 0
+    print(q_gs)
     for f_sg in f_sgs:
         qv = 0
         for q_g in q_gs:
-            vl = np.concatenate(f_sg.vertex_properties["molecule"].get_array(), q_g.vertex_properties["molecule"].get_array())
-            el = np.concatenate(f_sg.vertex_properties["bond"].get_array(), q_g.vertex_properties["bond"].get_array())
+            # print("indexing")
+            # print(f_sg.vertex_properties["molecule"].get_2d_array())
+            # print(type(f_sg.vertex_properties["molecule"].get_2d_array()))
+            # vl = np.concatenate(f_sg.vertex_properties["molecule"].get_array(), q_g.vertex_properties["molecule"].get_array())
+            # el = np.concatenate(f_sg.vertex_properties["bond"].get_array(), q_g.vertex_properties["bond"].get_array())
             # subgraph isomorphisms return list of maps, i.e we check for empty if not a subgraph
             # check subgraph parameter in function below 
-            if len(graph_tool.topology.subgraph_isomorphism(
-                f_sg, q_g, max_n=1, vertex_label=vl, edge_label=vl, induced=True, subgraph=False, generator=False)) > 0:
+            if len(gt.subgraph_isomorphism(
+                f_sg, q_g, max_n=1, vertex_label=(f_sg.vertex_properties["molecule"], q_g.vertex_properties["molecule"]), 
+                edge_label= (f_sg.edge_properties["bond"], q_g.edge_properties["bond"]), induced=False, subgraph=True, generator=False)) > 0:
                 fvectors[qv][fv] = 1
             qv += 1
         fv += 1
@@ -113,7 +124,8 @@ def get_database_graph_objects(filename):
     qg_list = []
 
     g = None
-    for line in freq_sg_file:
+    for line in qg_file:
+        splited = line.split()
         if splited[0] == 't':
             if g is not None:
                 qg_list.append(g)
@@ -126,23 +138,24 @@ def get_database_graph_objects(filename):
         elif splited[0] == 'u':
             e = g.add_edge(
                 g.vertex(int(splited[1])), g.vertex(int(splited[2])))
-            g.vertex_properties["bond"][e] = int(splited[3])
+            g.edge_properties["bond"][e] = int(splited[3])
 
+    qg_list.append(g)
     return qg_list
 
-
 def get_map(filepath):
-    out = json.load(open(filepath))
+    fp = open(filepath, 'r')
+    out = json.load(fp)
     return out
 
 if __name__ == '__main__':
     # cmd = "./pafi-1.0.1/Linux/fsg -s 80.0 -t ./Yeast/pafi_smol.txt_graph"
     # subprocess.call(cmd.split())
 
-    # n_graphs = get_no_of_graphs("./Yeast/pafi_smol.fp")
-    n_graphs = 100
-    # n_fpatterns = get_no_of_fpatterns("./Yeast/pafi_smol.fp")
-    n_fpatterns = 20
+    n_graphs = get_no_of_graphs("./Yeast/pafi_smol.fp")
+    # n_graphs = 100
+    n_fpatterns = get_no_of_fpatterns("./Yeast/pafi_smol.fp")
+    # n_fpatterns = 20
 
     print("patterns", n_fpatterns)
     print("graphs", n_graphs)
@@ -157,27 +170,24 @@ if __name__ == '__main__':
             for i in range(1, len(vals)):
                 fvectors[int(vals[i])][fv] = 1
             fv += 1
-    print(fvectors)
 
     qgs = get_query_graphs("./Yeast/query.txt_graph")
     fgs = get_freq_sub_graph("./Yeast/pafi_smol.fp")
     query_fvectors = index_query_graphs(qgs, fgs)
 
-
-    database_graphs = get_database_graph_objects("./Yeat/pafi_smol.txt_graph")
-    mapping = get_map("./Yeast/mapping_pafi_smol.txt_graph")
+    database_graphs = get_database_graph_objects("./Yeast/pafi_smol.txt_graph")
+    mapping = get_map("./Yeast/mapping.json")
 
     result = {}
     for i in range(query_fvectors.shape[0]):
+        result[i] = []
         for j in range(fvectors.shape[0]):
             if (np.all(query_fvectors[i]==np.logical_and(fvectors[j], query_fvectors[i]))):
-                # qgs[i] and database_graphs[j]
+                x=gt.subgraph_isomorphism(
+                qgs[i], database_graphs[j], max_n=1, vertex_label=(qgs[i].vertex_properties["molecule"], database_graphs[j].vertex_properties["molecule"]), 
+                edge_label= (qgs[i].edge_properties["bond"], database_graphs[j].edge_properties["bond"]), induced=False, subgraph=True, generator=False)
 
-                vl = np.concatenate(qgs[i].vertex_properties["molecule"].get_array(), database_graphs[i].vertex_properties["molecule"].get_array())
-                el = np.concatenate(qgs[i].vertex_properties["bond"].get_array(), database_graphs[i].vertex_properties["bond"].get_array())
+                result[i].append(str(mapping[str(i)]))
 
-                if len(graph_tool.topology.subgraph_isomorphism(
-                    qgs[i], database_graphs[i], max_n=1, vertex_label=vl, edge_label=vl, induced=True, subgraph=False, generator=False)) > 0:
-                    result[i].append(str(mapping[i]))
-
+    print(result)
     # result: for each query: in which trans id it is present

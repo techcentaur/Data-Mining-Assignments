@@ -60,15 +60,10 @@ def change_format(filepath, outfile=None, verbose=False):
 	if verbose:
 		print("[*] File saved in: {}".format(outfile))
 
-	# write mapping too
-	out = outfile.split("/")
-	out[-1] = "mapping_"+out[-1]
-	dictfile = "/".join(out)
-
-	with open(dictfile, 'w') as f:
+	with open("./Yeast/mapping.json", 'w') as f:
 		f.write(json.dumps(mapping_ids))
 
-	return outfile
+	return "./Yeast/mapping.json"
 
 if __name__ == '__main__':
 
