@@ -31,12 +31,12 @@ for support in supports:
     print('[*] Running algorithm: GASTON', flush=True)
     gaston.change_format(sys.argv[1])
     start = time.time()
-    subprocess.run(['./gaston-1.1/gaston', str(support), 'gaston_' + sys.argv[1].split('/')[-1]])
+    subprocess.run(['./gaston-1.1/gaston', str(support), 'gaston_' + sys.argv[1].split('/')[-1]], shell=True)
     print(' '.join(['./gaston-1.1/gaston', str(support), 'gaston_' + sys.argv[1].split('/')[-1]]))
     time_consumed['GASTON'].append(time.time() - start)
     print(time_consumed, flush=True)
     
-
+    
     print('[*] Running algorithm: PAFI', flush=True)
     pafi.change_format(sys.argv[1])
     start = time.time()

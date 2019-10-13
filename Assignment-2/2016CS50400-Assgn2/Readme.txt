@@ -29,6 +29,8 @@ unit in seconds
 'PAFI': [22.782464504241943, 128.17044353485107, 372.22339129447937, 1312.6531813144684, 3962.968509197235]
 }
 
+We could not run the benchmark script for gaston, because it was taking too much time and we were very close to deadline. But, we did run gaston on a dataset of 1000 graphs, and it was running quite fast, faster than the other two algorthims.
+
 2. Explain the trend and comment on growth rates (why one technique is faster than others)
 
 PAFI is much slower than gSpan: This is because it generates all the candidates of k edges before finding out the frequent patterns of k-edge. This takes very high amount of time.
