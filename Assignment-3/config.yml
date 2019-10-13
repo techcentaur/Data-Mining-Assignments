@@ -1,2 +1,5 @@
 data:
   filepath: ./data/1.txt_graph
+
+variables:
+  truncate_range: 1000
