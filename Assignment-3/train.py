@@ -1,57 +1,90 @@
-from config import config
-import numpy as np
-import torch as t
-
 import time
+import torch as tch
+import numpy as np
+
+from config import config
 
 
-def train_rnn_epoch(epoch, rnn, output, data_loader,
-                    optimizer_rnn, output_optimizer,
-                    rnn_scheduler, output_scheduler):
-    rnn.train()
-    output.train()
-    sum_of_loss = 0
-    for batch_id, dict_data in enumerate(data_loader):
+def ____training____(params):
+    model1 = params["model1"]
+    model2 = params["model2"]
+    dataloader = params["data_loader"]
+
+    model1.train()
+    model2.train()
+
+    for i, d in enumerate(dataloader):
         # set models param's gradients to zero
-        rnn.zero_grad()
-        output.zero_grad()
+        model1.zero_grad()
+        model2.zero_grad()
 
-        # get x and y to desired formats
-        # unsorted x, y as floats
-        x = dict_data['x'].float()
-        y = dict_data['y'].float()
+        sequence_list = d['seq'].float()
 
-        y_length = dict_data['len']
-        max_y_length = max(y_length)
+        values = {'X': [], 'Y': [], 'L': []}
+        for seq in sequence_list:
+            Xdatum = np.zeros((dataloader.maxnodes, dataloader.trunc_length))
+            Ydatum = np.zeros((dataloader.maxnodes, dataloader.trunc_length))
 
-        # truncated till max len
-        x = x[:, 0:max_y_length, :]
-        y = y[:, 0:max_y_length, :]
+            X[0, :] = 1
+            Xdatum[1: seq[0]+1, :] = seq
+            Ydatum[0: seq[0], :] = seq
 
-        # initialize hidden state
-        rnn.hidden = rnn.init_hidden(batch=x.size(0))
+            values['X'].append(Xdatum)
+            values['Y'].append(Ydatum)
+            values['L'].append(seq.shape[0])
 
-        # sorting
-        # desc sort according to num of nodes in graph
-        y_length, index_rearrangement = t.sort(y_length, 0, descending=True)
+        values['X'] = values['X'][:, 0: max(values['L']), :]       
+        values['Y'] = values['Y'][:, 0: max(values['L']), :]
+
+        model1.hidden = model1.__hidden__(len(values['L']))
+        Y, sortedindex = tch.sort(
+                    values['L'],
+                    0,
+                    descending = True
+                )
+        values['X'] = values['X'].index_select(0, sortedindex)
+        values['Y'] = values['Y'].index_select(0, sortedindex)
+
+        Y_reshape = pack_padded_sequence(
+                    values['Y'],
+                    Y.numpy().tolist()
+                    batch_first=True
+                    ).data
+
+        # reverse
+        idx = [x for x in range(Y_reshape.size(0)-1, -1, -1)]
+        Y_reshape = Y_reshape.index_select(0, tch.LongTensor(idx))
+        # add dimension
+        Y_reshape = Y_reshape.view(Y_reshape.size(0), Y_reshape.size(1), 1)
+
+        mod2X = torch.cat((
+                    torch.ones(Y_reshape.size(0), 1, 1),
+                    Y_reshape[:, 0:-1, 0:1]),
+                dim = 1
+                )
+        mod2Y = Y_reshape
+
+
+        # don't understand
+        yltmp = []
+        yltmp_ = np.bincount(np.array(Y))
+        for _i in range(len(yltmp_)-1, 0, -1):
+            tmp = np.sum(yltmp_[_i:])
+            yltmp.extend([min(_i, values['Y'].size(2))] * tmp)
+
+
+        X1 = Variable(values['X'])
+        Y1 = Variable(values['Y'])
+        X2 = Variable(mod2X)
+        Y2 = Variable(mod2Y)
         
-        x = t.index_select(x, 0, index_rearrangement)
-        y = t.index_select(y, 0, index_rearrangement)
-        y_length = y_length.numpy().tolist()
-
-        
 
 
-def test_rnn_epoch(epoch, rnn, output, test_batch_size=16):
-    pass
 
 
-def train_rnn_forward_epoch(epoch, rnn, output, data_loader):
-    pass
+ 
 
-
-def train(args, dataset_train, rnn, output):
-    epoch = 1
+def train(model1, model2, data_loader):
 
     # optimizer and schedulers
     rnn_optimizer = optim.Adam(
@@ -70,11 +103,15 @@ def train(args, dataset_train, rnn, output):
 
     while epoch <= config['train']['epochs']:
         time_start = time.time()
-        # training
-        train_rnn_epoch(epoch, rnn, output, dataset_train, rnn_optimizer,
-                        output_optimizer, rnn_scheduler, output_scheduler)
-        # testing
+
+
+        params = {
+            "data_loader": data_loader
+            "model1": model1,
+            "model2": model2
+        }
+        ____training____(params)
+
 
         # saving model checkpoints
-
         epoch_timings[epoch-1] = time.time() - time_start

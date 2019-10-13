@@ -12,3 +12,4 @@ train:
   milestones: 
     - 400
     - 1000
+  batch_size: 128

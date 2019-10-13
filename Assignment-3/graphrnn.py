@@ -3,20 +3,24 @@ Implement dataloader class
 that implements new version of bfs
 technqiue as desribed in the paper
 """
-from config import config
+
 import queue
 import networkx as nx
 
+from config import config
+
+
 class GraphRNNLoader:
 	"""
-	Pytorch Dataloader class but for graphRNNs
+	Pytorch Dataloader class but for graphRNN
 	"""
 
 	def __init__(self, graphs):
 		self.matrices = [nx.to_numpy_matrix(G) for g in graphs]
+		self.maxnodes = max([g.number_of_nodes() for g in graphs])
+		
 		self.num_graphs = len(self.matrices)
 		self.trunc_length = self.truncation()
-
 
 	def __str__(self):
 		string = ""
@@ -34,19 +38,16 @@ class GraphRNNLoader:
 
 		# choose a random ordering: pi
 		pi = np.random.permutation(workerN)
-		ordering = np.ix_(pi, pi)
-		worker = worker[ordering]
+		worker = worker[np.ix_(pi, pi)]
 		workerG = nx.from_numpy_matrix(np.asmatrix(worker))
 
 		# draw a bfs sequence and arrange graph
 		pi_v1 = np.random.randint(workerN)
 		bfs_pi = np.array(breadth_first_search(workerG, pi_v1))
-		bfs_ordering = np.ix_(bfs_pi, bfs_pi)
-		worker = worker[bfs_ordering]
+		worker = worker[np.ix_(bfs_pi, bfs_pi)]
 
 		seq = convert_to_sequence(worker, workerN)
-
-		return  seq
+		return  {'seq': seq}
 
 
 	def convert_to_sequence(self, graph, num):
@@ -117,15 +118,13 @@ class GraphRNNLoader:
 
 			# choose a random ordering: pi
 			pi = np.random.permutation(workerN)
-			ordering = np.ix_(pi, pi)
-			worker = worker[ordering]
+			worker = worker[np.ix_(pi, pi)]
 			workerG = nx.from_numpy_matrix(np.asmatrix(worker))
 
 			# draw a bfs sequence and arrange graph
 			pi_v1 = np.random.randint(workerN)
 			bfs_pi = np.array(breadth_first_search(workerG, pi_v1))
-			bfs_ordering = np.ix_(bfs_pi, bfs_pi)
-			worker = worker[bfs_ordering]
+			worker = worker[np.ix_(bfs_pi, bfs_pi)]
 
 			# find max frontier length: M
 			fixed_size.append(get_max_truncation(worker, workerN))

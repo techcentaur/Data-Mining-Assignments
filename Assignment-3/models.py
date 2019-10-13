@@ -36,7 +36,7 @@ class GRUModel(nn.Module):
                 nn.Linear(self.params["outputtmp"], self.params["outputsize"])
             )
 
-    def _hidden_(self, batch_size):
+    def __hidden__(self, batch_size):
         arr = torch.zeros(
                 self.params["num_layers"],
                 batch_size,
