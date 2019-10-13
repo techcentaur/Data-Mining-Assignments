@@ -79,9 +79,6 @@ class GraphRNNLoader:
 		max_of_Ms = max([len(x) for x in Ms])
 	    return max_of_Ms
 
-
-
-
 	def breadth_first_search(self, graph, first_node):
 		"""
 		Do BFS on the `graph` starting from `first_node`

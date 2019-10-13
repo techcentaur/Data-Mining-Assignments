@@ -1,35 +1,45 @@
-from config import config
-from data import Data
+# modules
 from datetime import datetime
 
+# written files
+from data import Data
+from config import config
+from models import GRUModel
+from graphrnn import GraphRNNLoader
+from train import train
 
 if __name__ == '__main__':
-	
-
 	now = datetime.now()
 	print("[*] Processing the data... @ {}!".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
 	d = Data()
 	graphobjects = d.get_graphs()
 
-
-	# update config variables if needed 
-	# print the necessary information
-
-
 	# implement function for dataset sampler
-	# dataset = graphRNN_dataloader(graphobjects)
+	loader = GraphRNNLoader(graphobjects)
+    dataloader = torch.utils.data.DataLoader(
+    				loader,
+	    			batch_size=config["batch_size"],
+	    			num_workers=10
+	    			)
 
+    params = {
+        "inputsize": loader.trunc_length,
+        "outputtmp": 64,
+        "hiddensize": 128,
+        "numlayers": 4,
+        "outputsize":
+    }
+    model1 = GRUModel(params)
 
-	# implement conversion to pytorch dataloader object
-	# data_loader = torch.utils.data.Dataloader(dataset)
-
-
-	# define pytorch - models here
-	# models for:
-	#	1. output
-	#	2. rnn
-
+    params = {
+        "inputsize": 1,
+        "outputtmp": 8,
+        "hiddensize": 16,
+        "numlayers": 4,
+        "outputsize": 1
+    }
+    model2 = GRUModel(params)
 
 	# implement training wrapper function
-	# train(data_loader, output_model, rnn_model)
+	train(model1, model2, dataloader)

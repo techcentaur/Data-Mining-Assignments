@@ -6,42 +6,53 @@ models for
 
 """
 import torch
-from torch import nn
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
-
+from torch import (nn, zeros)
+from torch.nn.utils.rnn import (pad_packed_sequence, pack_padded_sequence)
+from torch.nn.autograd import Variable
 
 class GRUModel(nn.Module):
-    def __init__(self, input_size, embedding_size, hidden_size, output_size, num_layers):
+    def __init__(self, params):
         super().__init__()
 
-        self.input = nn.Linear(input_size, embedding_size)
-        self.rnn = nn.GRU(input_size=embedding_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
-        self.output = nn.Sequential(
-                nn.Linear(hidden_size, embedding_size),
-                nn.ReLU(),
-                nn.Linear(embedding_size, output_size)
-            )
-        self.relu = nn.ReLU()
-        self.hidden = None
+        self.params = params
 
-        for name, param in self.rnn.named_parameters():
-            if 'bias' in name:
-                nn.init.constant(param, 0.25)
-            elif 'weight' in name:
-                nn.init.xavier_uniform(param, gain=nn.init.calculate_gain('sigmoid'))
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                m.weight.data = nn.init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain('relu'))
-        
-    def init_hidden(self, batch_size):
-        return torch.autograd.Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
+        self.hidden = None
+        self.layer1 = nn.Linear(
+                    in_features=self.params["inputsize"],
+                    out_features=self.params["outputtmp"],
+                    bias=True
+                    )
+        self.relu = nn.ReLU()
+        self.layer2 = nn.GRU(
+                    input_size=self.params["outputtmp"],
+                    hidden_size=self.params["hiddensize"],
+                    num_layers=self.params["numlayers"],
+                    batch_first=True, #(batch, seq, feature)
+                    bias=True
+                    )
+        self.layer3 = nn.Sequential(
+                nn.Linear(self.params["hiddensize"], self.params["outputtmp"]),
+                nn.ReLU(),
+                nn.Linear(self.params["outputtmp"], self.params["outputsize"])
+            )
+
+    def _hidden_(self, batch_size):
+        arr = torch.zeros(
+                self.params["num_layers"],
+                batch_size,
+                self.params["hidden_size"]
+                )
+        return Variable(arr)
     
-    def forward(self, input_raw, input_len, pack=False):
-        x = self.input(input_raw)
-        x = self.relu(x)
-        if pack:
-            x = pack_padded_sequence(x, input_len, batch_first=True)
-        output_raw, self.hidden = self.rnn(x, self.hidden)
-        if pack:
-            output_raw = pad_packed_sequence(output_raw, batch_first=True)[0]
-        return self.output(output_raw)
+    def forward(self, X, l):
+        X = self.layer1(X)
+        X = self.relu(X)
+
+        X = pack_padded_sequence(X, l, batch_first=True)
+        X, self.hidden = self.layer2(X, self.hidden)
+        
+        X = pad_packed_sequence(X, batch_first=True)
+        X = X[0] # we got a tuple of X, lengths list
+        
+        X = self.layer3(X)
+        return X
