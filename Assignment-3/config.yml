@@ -4,6 +4,9 @@ data:
 variables:
   truncate_range: 1000
 
+nn:
+  num_of_layers: 4
+
 train:
   epoch: 3000
   epoch_test: 100

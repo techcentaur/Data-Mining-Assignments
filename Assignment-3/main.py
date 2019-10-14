@@ -30,7 +30,7 @@ if __name__ == '__main__':
         "numlayers": 4,
         "outputsize":
     }
-    model1 = GRUModel(params)
+    model1 = GRUModel(params).cuda()
 
     params = {
         "inputsize": 1,
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         "numlayers": 4,
         "outputsize": 1
     }
-    model2 = GRUModel(params)
+    model2 = GRUModel(params).cuda()
 
 	# implement training wrapper function
 	train(model1, model2, dataloader)

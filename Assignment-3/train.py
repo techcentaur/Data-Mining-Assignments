@@ -33,23 +33,23 @@ def ____training____(params):
             values['Y'].append(Ydatum)
             values['L'].append(seq.shape[0])
 
-        values['X'] = values['X'][:, 0: max(values['L']), :]       
+        values['X'] = values['X'][:, 0: max(values['L']), :]
         values['Y'] = values['Y'][:, 0: max(values['L']), :]
 
         model1.hidden = model1.__hidden__(len(values['L']))
         Y, sortedindex = tch.sort(
-                    values['L'],
-                    0,
-                    descending = True
-                )
+            values['L'],
+            0,
+            descending=True
+        )
         values['X'] = values['X'].index_select(0, sortedindex)
         values['Y'] = values['Y'].index_select(0, sortedindex)
 
         Y_reshape = pack_padded_sequence(
-                    values['Y'],
-                    Y.numpy().tolist()
-                    batch_first=True
-                    ).data
+            values['Y'],
+            Y.numpy().tolist()
+            batch_first=True
+        ).data
 
         # reverse
         idx = [x for x in range(Y_reshape.size(0)-1, -1, -1)]
@@ -58,12 +58,11 @@ def ____training____(params):
         Y_reshape = Y_reshape.view(Y_reshape.size(0), Y_reshape.size(1), 1)
 
         mod2X = torch.cat((
-                    torch.ones(Y_reshape.size(0), 1, 1),
-                    Y_reshape[:, 0:-1, 0:1]),
-                dim = 1
-                )
+            torch.ones(Y_reshape.size(0), 1, 1),
+            Y_reshape[:, 0:-1, 0:1]),
+            dim=1
+        )
         mod2Y = Y_reshape
-
 
         # don't understand
         yltmp = []
@@ -72,46 +71,56 @@ def ____training____(params):
             tmp = np.sum(yltmp_[_i:])
             yltmp.extend([min(_i, values['Y'].size(2))] * tmp)
 
+        X1 = Variable(values['X']).cuda()
+        Y1 = Variable(values['Y']).cuda()
+        X2 = Variable(mod2X).cuda()
+        Y2 = Variable(mod2Y).cuda()
 
-        X1 = Variable(values['X'])
-        Y1 = Variable(values['Y'])
-        X2 = Variable(mod2X)
-        Y2 = Variable(mod2Y)
-        
+        # hi in equation algo
+        model1_hidden_state = model1(X1, pack=True, input_len=Y)
+        # packed format
+        model1_hidden_state = pack_padded_sequence(
+            model1_hidden_state, Y, batch_first=True).data
 
+        #  reverse h
+        # arrange indexes for rearrangement
+        indexes = Variable(tch.LongTensor(
+            [j for j in range(model1_hidden_state.shaoe[0] - 1, -1, -1)])).cuda()
+        model1_hidden_state = model1_hidden_state.index_select(0, indexes)
 
+        # provide hidden state of graph level rnn model1 to edge level rnn model2
 
-
- 
 
 def train(model1, model2, data_loader):
 
     # optimizer and schedulers
-    rnn_optimizer = optim.Adam(
-        list(rnn.parameters()), lr=config['train']['lr'])
-    output_optimizer = optim.Adam(
-        list(output.parameters()), lr=config['train']['lr'])
+    model1_optimizer = optim.Adam(
+        list(model1.parameters()), lr=config['train']['lr'])
+    model2_optimizer = optim.Adam(
+        list(model2.parameters()), lr=config['train']['lr'])
 
-    rnn_scheduler = MultiStepLR(
-        rnn_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
-    output_scheduler = MultiStepLR(
-        output_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
+    model1_scheduler = MultiStepLR(
+        model1_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
+    model2_scheduler = MultiStepLR(
+        model2_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
 
-    # epoch loops
     # save epoch timings
     epoch_timings = np.zeros(config['train']['epochs'])
 
+    # epoch loops
     while epoch <= config['train']['epochs']:
         time_start = time.time()
-
 
         params = {
             "data_loader": data_loader
             "model1": model1,
-            "model2": model2
+            "model2": model2,
+            "m1_opt" model1_optimizer,
+            "m2_opt": model2_optimizer,
+            "m1_sched": model1_scheduler,
+            "m2_sched": model2_scheduler
         }
         ____training____(params)
-
 
         # saving model checkpoints
         epoch_timings[epoch-1] = time.time() - time_start
