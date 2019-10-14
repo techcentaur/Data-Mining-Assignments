@@ -8,11 +8,12 @@ nn:
   num_of_layers: 4
 
 train:
-  epoch: 3000
+  epochs: 3000
   epoch_test: 100
   lr: 0.003
   lr_rate: 0.3
   milestones: 
     - 400
     - 1000
-  batch_size: 128
+
+batch_size: 1

@@ -1,14 +1,7 @@
-"""
-All models have to be implemented here
-models for
-1. output
-2. rnn
-
-"""
 import torch
 from torch import (nn, zeros)
+from torch.autograd import Variable
 from torch.nn.utils.rnn import (pad_packed_sequence, pack_padded_sequence)
-from torch.nn.autograd import Variable
 
 class GRUModel(nn.Module):
     def __init__(self, params):
@@ -38,21 +31,23 @@ class GRUModel(nn.Module):
 
     def __hidden__(self, batch_size):
         arr = torch.zeros(
-                self.params["num_layers"],
+                self.params["numlayers"],
                 batch_size,
-                self.params["hidden_size"]
+                self.params["hiddensize"]
                 )
         return Variable(arr)
     
-    def forward(self, X, l):
+    def forward(self, X, l, to_pack=True):
         X = self.layer1(X)
         X = self.relu(X)
 
-        X = pack_padded_sequence(X, l, batch_first=True)
-        X, self.hidden = self.layer2(X, self.hidden)
-        
-        X = pad_packed_sequence(X, batch_first=True)
-        X = X[0] # we got a tuple of X, lengths list
-        
+        if to_pack:
+            X = pack_padded_sequence(X, l, batch_first=True)
+            X, self.hidden = self.layer2(X, self.hidden)
+            X = pad_packed_sequence(X, batch_first=True)
+            X = X[0]
+        else:
+            X, self.hidden = self.layer2(X, self.hidden)
+
         X = self.layer3(X)
         return X

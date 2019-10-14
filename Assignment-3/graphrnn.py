@@ -5,8 +5,8 @@ technqiue as desribed in the paper
 """
 
 import queue
+import numpy as np
 import networkx as nx
-
 from config import config
 
 
@@ -16,7 +16,7 @@ class GraphRNNLoader:
 	"""
 
 	def __init__(self, graphs):
-		self.matrices = [nx.to_numpy_matrix(G) for g in graphs]
+		self.matrices = [nx.to_numpy_matrix(g) for g in graphs]
 		self.maxnodes = max([g.number_of_nodes() for g in graphs])
 		
 		self.num_graphs = len(self.matrices)
@@ -27,13 +27,16 @@ class GraphRNNLoader:
 		string += "[*] GraphRNN Loader \n"
 		return string
 
+	def __len__(self):
+		return len(self.matrices)
+
 	def __getitem__(self, i):
 		"""returns an item according to the equation:
 								S_pi = f_S(BFS(G, pi))
 		"""
 		
 		# get the graph at ith index (say worker)
-		worker = self.matrices[index].copy()
+		worker = self.matrices[i].copy()
 		workerN = worker.shape[0]
 
 		# choose a random ordering: pi
@@ -43,49 +46,50 @@ class GraphRNNLoader:
 
 		# draw a bfs sequence and arrange graph
 		pi_v1 = np.random.randint(workerN)
-		bfs_pi = np.array(breadth_first_search(workerG, pi_v1))
+		bfs_pi = np.array(self.breadth_first_search(workerG, pi_v1))
 		worker = worker[np.ix_(bfs_pi, bfs_pi)]
 
-		seq = convert_to_sequence(worker, workerN)
+		seq = self.convert_to_sequence(worker, workerN)
 		return  {'seq': seq}
 
 
 	def convert_to_sequence(self, graph, num):
-	    """ Convert graph to truncated sequence
-	    """
+		""" Convert graph to truncated sequence
+		"""
 
-	    graph = np.tril(graph, k = -1)[1 : num, 0 : num-1]
-	    sequence = np.zeros((num, self.trunc_length))
+		graph = np.tril(graph, k = -1)[1 : num, 0 : num-1]
+		sequence = np.zeros((num, self.trunc_length))
 
-	    t = self.trunc_length
-	    for i in range(num):
-	    	p1 = max(i-t+1 , 0)
-	    	sequence[i, (p1-(i+1))+t:t] = graph[i, p1:i+1]
-	    return sequence
+		t = self.trunc_length
+		for i in range(num-1):
+			p1 = max(i-t+1 , 0)
+			sequence[i, (p1-(i+1))+t:t] = graph[i, p1:i+1]
+		return sequence
 
 	def get_max_truncation(self, graph, num):
 		"""
 		Return the max of Ms: which are the BFS-frontier intervals: A_i
 		"""
 
-	    graph = np.tril(graph, k = -1)[1 : num, 0 : num-1]
-
-	    Ms = []
-	    pointer1 = 0
-	    for i in range(num):
-	        A_interval = graph[i, pointer1:i+1]
-	        pointer1 = (i+1) - len(A_interval) + np.amin(np.nonzero(A_interval)[0])
-	        Ms.append(A_interval)
-	      
+		graph = np.tril(graph, k = -1)[1:num, 0:num-1]
+		# print(graph, num)
+		Ms = []
+		pointer1 = 0
+		for i in range(num-1):
+			A_interval = graph[i, pointer1:i+1]
+			pointer1 = (i+1) - len(A_interval) + np.amin(np.nonzero(A_interval)[0])
+			Ms.append(A_interval)
+			# print(pointer1, A_interval)
+		  
 		max_of_Ms = max([len(x) for x in Ms])
-	    return max_of_Ms
+		return max_of_Ms
 
 	def breadth_first_search(self, graph, first_node):
 		"""
 		Do BFS on the `graph` starting from `first_node`
 		"""
 		bfs = []
-		successors = nx.bfs_successors(graph, first_node)
+		successors = dict(nx.bfs_successors(graph, first_node))
 
 		q = queue.Queue()
 		q.put(first_node)
@@ -94,11 +98,11 @@ class GraphRNNLoader:
 			pop = q.get()
 			bfs.append(pop)
 
-			succ = successors[pop]
-			if succ:
+			if pop in successors:
+				succ = successors[pop]
 				for s in succ:
 					q.put(s)
-
+		# print(bfs)
 		return bfs
 
 
@@ -123,11 +127,12 @@ class GraphRNNLoader:
 
 			# draw a bfs sequence and arrange graph
 			pi_v1 = np.random.randint(workerN)
-			bfs_pi = np.array(breadth_first_search(workerG, pi_v1))
+			# print(pi_v1, workerN)
+			bfs_pi = np.array(self.breadth_first_search(workerG, pi_v1))
 			worker = worker[np.ix_(bfs_pi, bfs_pi)]
 
 			# find max frontier length: M
-			fixed_size.append(get_max_truncation(worker, workerN))
+			fixed_size.append(self.get_max_truncation(worker, workerN))
 
 		return max(fixed_size)
 
