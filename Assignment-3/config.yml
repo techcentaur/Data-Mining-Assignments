@@ -1,5 +1,5 @@
 data:
-  filepath: ./Yeast/167.txt_graph
+  filepath: ./Yeast/1.txt_graph
 
 variables:
   truncate_range: 1000
@@ -10,10 +10,9 @@ nn:
 train:
   epochs: 3000
   epoch_test: 100
-  lr: 0.003
-  lr_rate: 0.3
+  lr: 0.001
   milestones: 
     - 400
     - 1000
 
-batch_size: 1
+batch: 3

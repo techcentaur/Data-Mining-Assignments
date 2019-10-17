@@ -5,41 +5,40 @@ from data import Data
 from train import train
 from config import config
 from models import GRUModel
-from graphrnn import GraphRNNLoader
+from processing import DataProcessor
 
 if __name__ == '__main__':
 	now = datetime.now()
-	print("[*] Processing the data... @ {}!".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+	print("[*] Graph Generative Model: GraphRNN\n")
+	print("[-] Starting @ {}!".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
-	d = Data()
-	graphobjects = d.get_graphs()
-
-	# print("[*] ")
+	data = Data()
+	graphs = data.get_graphs()
+	print("[*] Graph dataset loaded: {} graphs".format(len(graphs)))
 
 	# implement function for dataset sampler
-	loader = GraphRNNLoader(graphobjects)
+	processor = DataProcessor(graphs)
 	dataloader = tch.utils.data.DataLoader(
-					loader,
-					batch_size=config["batch_size"]
-					)
+					processor,
+					batch_size=config["batch"])
 
 	params = {
-		"inputsize": loader.trunc_length,
-		"outputtmp": 64,
-		"hiddensize": 128,
-		"numlayers": 4,
-		"outputsize": 16
+		"input_size": processor.trunc_length,
+		"num_layers": 4,
+		"hidden_size": 128,
+		"num_directions": 1,
+		"output_size": 16
 	}
 	model1 = GRUModel(params)
 
 	params = {
-		"inputsize": 1,
-		"outputtmp": 8,
-		"hiddensize": 16,
-		"numlayers": 4,
-		"outputsize": 1
+		"input_size": 1,
+		"hidden_size": 16,
+		"num_layers": 4,
+		"num_directions": 1,
+		"output_size": 1
 	}
 	model2 = GRUModel(params)
 
-	# implement training wrapper function
-	train(model1, model2, dataloader, loader)
+	# # implement training wrapper function
+	train(model1, model2, dataloader, processor)

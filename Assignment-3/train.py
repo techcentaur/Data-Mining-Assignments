@@ -10,6 +10,14 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 
+def get_pack_length(Y, L):
+    packlength = []
+    packed = np.bincount(np.array(L).astype('int64'))
+    for i in range(len(packed)-1, 0, -1):
+        tmp = np.sum(packed[i:])
+        packlength.extend([min(i, tch.FloatTensor(Y).size(2))] * tmp)
+    return packlength
+
 def ____training____(params, loader):
     model1 = params["model1"]
     model2 = params["model2"]
@@ -19,16 +27,15 @@ def ____training____(params, loader):
     model2.train()
 
     for i, d in enumerate(dataloader):
-        # set models param's gradients to zero
         model1.zero_grad()
         model2.zero_grad()
 
         sequence_list = d['seq'].float()
-
         values = {'X': [], 'Y': [], 'L': []}
+
         for seq in sequence_list:
-            Xdatum = np.zeros((loader.maxnodes, loader.trunc_length))
-            Ydatum = np.zeros((loader.maxnodes, loader.trunc_length))
+            Xdatum = np.zeros((params["processor"].maxnodes, params["processor"].trunc_length))
+            Ydatum = np.zeros((params["processor"].maxnodes, params["processor"].trunc_length))
 
             Xdatum[0, :] = 1
 
@@ -39,100 +46,56 @@ def ____training____(params, loader):
             values['Y'].append(Ydatum)
             values['L'].append(seq.shape[0])
 
+        # syntax of using pack_padded_sequence
         values['X'] = [x[0: max(values['L']), :] for x in values['X']]
         values['Y'] = [x[0: max(values['L']), :] for x in values['Y']]
 
-
-        model1.hidden = model1.__hidden__(len(values['L']))
-        Y = values['L']
-        # Y, sortedindex = tch.sort(
-        #     tch.FloatTensor(values['L']),
-        #     0,
-        #     descending=True
-        # )
-        # values['X'] = tch.FloatTensor(values['X']).index_select(0, sortedindex)
-        # values['Y'] = tch.FloatTensor(values['Y']).index_select(0, sortedindex)
-
-        # Y_reshape = pack_padded_sequence(
-        #     values['Y'],
-        #     Y.numpy().tolist(),
-        #     batch_first=True
-        # ).data
-
-        Y_reshape = pack_padded_sequence(
-            tch.FloatTensor(values['Y']),
-            tch.FloatTensor(values['L']), batch_first=True).data
-
-        # reverse
-        # idx = [x for x in range(Y_reshape.size(0)-1, -1, -1)]
-        # Y_reshape = Y_reshape.index_select(0, tch.LongTensor(idx))
-
-        # add dimension
-        Y_reshape = Y_reshape.view(Y_reshape.size(0), Y_reshape.size(1), 1)
-        mod2X = tch.cat((
-            tch.ones(Y_reshape.size(0), 1, 1),
-            Y_reshape[:, 0:-1, 0:1]),
-            dim=1
-        )
-
-        mod2Y = Y_reshape
-
-        # don't understand
-        yltmp = []
-        # print(Y)
-        yltmp_ = np.bincount(np.array(Y).astype('int64'))
-        for _i in range(len(yltmp_)-1, 0, -1):
-            tmp = np.sum(yltmp_[_i:])
-            yltmp.extend([min(_i, tch.FloatTensor(values['Y']).size(2))] * tmp)
-
+        model1.hidden = Variable(
+                    tch.zeros(model1.params["num_layers"] * model1.params["num_directions"],
+                    len(values['L']),
+                    model1.params["hidden_size"]))
 
         X1 = Variable(tch.FloatTensor(values['X']))
         Y1 = Variable(tch.FloatTensor(values['Y']))
-        X2 = Variable(mod2X)
-        Y2 = Variable(mod2Y)
 
-        # hi in equation algo
+        Ypackpad = pack_padded_sequence(
+            tch.FloatTensor(values['Y']),
+            tch.FloatTensor(values['L']),
+            batch_first=True).data
+        Ypacksize = Ypackpad.size()
+        Ypackpad = Ypackpad.view(Ypacksize[0], Ypacksize[1], 1)
 
-        # model1_HS: is the hidden state
+        X2 = Variable(tch.cat((
+            tch.ones(Ypackpad.size(0), 1, 1),
+            Ypackpad[:, 0:-1, :]),
+            dim=1))
+        Y2 = Variable(Ypackpad)
 
-        # packed format
-        model1_HS = pack_padded_sequence(
-            model1(X1, l=Y), Y, batch_first=True).data
+        assert X2.shape==Y2.shape
 
-        #  reverse h
-        # arrange indexes for rearrangement
-        indexes = Variable(tch.LongTensor(
-            [j for j in range(model1_HS.shape[0] - 1, -1, -1)]))
-        model1_HS = model1_HS.index_select(0, indexes)
+        X1 = pack_padded_sequence(X1, values['L'], batch_first=True, enforce_sorted=False)
+        X1out = model1(X1)
+        # print(X1out.shape)
+        # batch seq hiddensize
 
-        # provide hidden state of graph level rnn model1 to edge level rnn model2
-        HSsize = model1_HS.size()
+        X1outpacked = pack_padded_sequence(X1out, values['L'], batch_first=True).data
+        HSsize = X1outpacked.size()
+
         newhidden = Variable(
             tch.zeros(
-                model2.params["numlayers"]-1,
+                model2.params["num_layers"]-1,
                 HSsize[0],
-                HSsize[1]
-                )
-            )
+                HSsize[1]))
 
         model2.hidden = tch.cat(
-                (
-                    model1_HS.view(1, HSsize[0], HSsize[1]),
+                (X1outpacked.view(1, HSsize[0], HSsize[1]),
                     newhidden
-                ),
-                dim = 0
-            )
-        # print(yltmp)
-        outY = tch.sigmoid(model2(X2, l=yltmp))
-        outY = pad_packed_sequence(
-                pack_padded_sequence(outY, yltmp, batch_first=True),
-                batch_first=True
-            )[0]
+                ), dim = 0)
+        pl = get_pack_length(values['Y'], values['L'])
 
-        Y2 = pad_packed_sequence(
-                pack_padded_sequence(Y2, yltmp, batch_first=True),
-                batch_first=True
-            )[0]
+        outY = pack_padded_sequence(X2, pl, batch_first=True, enforce_sorted=False)
+        outY = model2(outY)
+        outY = tch.sigmoid(outY)
 
         loss = F.binary_cross_entropy(outY, Y2)
         loss.backward()
@@ -143,32 +106,34 @@ def ____training____(params, loader):
         params["m2_sched"].step()
         params["m1_sched"].step()
 
-        print("loss: {} | f: {}".format(loss.tolist(), loss))
+        print("loss: {}".format(loss.tolist(), loss))
 
-
-def train(model1, model2, data_loader, loader):
+def train(model1, model2, data_loader, processor):
 
     # optimizer and schedulers
     model1_optimizer = optim.Adam(
-        list(model1.parameters()), lr=config['train']['lr'])
+        list(model1.parameters()),
+        lr=config['train']['lr'])
     model2_optimizer = optim.Adam(
-        list(model2.parameters()), lr=config['train']['lr'])
+        list(model2.parameters()),
+        lr=config['train']['lr'])
 
     model1_scheduler = MultiStepLR(
-        model1_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
+        model1_optimizer,
+        milestones=config['train']['milestones'],
+        gamma=config['train']['lr'])
     model2_scheduler = MultiStepLR(
-        model2_optimizer, milestones=config['train']['milestones'], gamma=config['train']['lr_rate'])
+        model2_optimizer,
+        milestones=config['train']['milestones'],
+        gamma=config['train']['lr'])
 
-    # save epoch timings
-    epoch_timings = np.zeros(config['train']['epochs'])
-
-    # epoch loops
     epoch = 0
     while epoch <= config['train']['epochs']:
         time_start = time.time()
 
         params = {
             "data_loader": data_loader,
+            "processor": processor,
             "model1": model1,
             "model2": model2,
             "m1_opt": model1_optimizer,
@@ -176,8 +141,7 @@ def train(model1, model2, data_loader, loader):
             "m1_sched": model1_scheduler,
             "m2_sched": model2_scheduler
         }
-        ____training____(params, loader)
+        ____training____(params, processor)
 
-        # saving model checkpoints
-        epoch_timings[epoch-1] = time.time() - time_start
-        epoch+=1
+        # print("[*] Epoch {} | Time {}".format(epoch+1, time.time() - time_start))
+        epoch += 1
