@@ -3,6 +3,10 @@ from torch import (nn, zeros)
 from torch.autograd import Variable
 from torch.nn.utils.rnn import (pad_packed_sequence, pack_padded_sequence)
 
+# TODO: write sample_sigmoid
+
+
+
 class GRUModel(nn.Module):
     def __init__(self, params):
         super().__init__()
