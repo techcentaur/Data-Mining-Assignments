@@ -6,7 +6,6 @@ from config import config
 class Data:
     def __init__(self):
         self.labelMap = {}
-        self.edge_encoding = {}
 
     def get_graphs(self):
         file = config["data"]["filepath"]
@@ -62,8 +61,6 @@ class Data:
                     else:
                         edge_params = line.split(' ')
 
-                        if int(edge_params[2]) not in self.edge_encoding:
-                            self.edge_encoding[int(edge_params[2])] = True
                         edges_list.append((int(edge_params[0]), int(
                             edge_params[1]), {'label': int(edge_params[2])}))
                         # graphs[idx].add_edge(int(edge_params[0]), int(
@@ -76,37 +73,19 @@ class Data:
                             read_state = -1
 
         matrices = [nx.to_numpy_matrix(g) for g in graphs]
-        return matrices
+        alist = []
+        for g in graphs:
+            d = dict(g.nodes(data=True))            
+            a = np.zeros((len(d), len(d), 4))
 
-    def network_graph_to_matrix(self, graph, is_list=False):        
-        if is_list:
-            alist = []
-            for g in graph:
-                d = dict(g.nodes(data=True))            
-                a = np.zeros((len(d), len(d), 1+len(self.edge_encoding)))
+            for x, y, d1 in list(g.edges(data=True)):
+                a[x, y, d1['label']] = 1 
+                a[y, x, d1['label']] = 1
 
-                for x, y, d in list(g.edges(data=True)):
-                    a[x][y][0] = 1
-                    a[x][y][d['label']] = 1
+            alist.append(a)
 
-                    a[y][x][0] = 1
-                    a[y][x][d['label']] = 1
+        return matrices, alist
 
-                alist.append(a)
-            return alist
-
-        else:
-            d = dict(graph.nodes(data=True))            
-            a = np.zeros((len(d), len(d), 1+len(self.edge_encoding)))
-
-            for x, y, d in list(graph.edges(data=True)):
-                a[x][y][0] = 1
-                a[x][y][d['label']] = 1
-
-                a[y][x][0] = 1
-                a[y][x][d['label']] = 1
-
-            return a
 
 if __name__ == "__main__":
     d = Data()

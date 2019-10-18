@@ -13,17 +13,17 @@ if __name__ == '__main__':
 	print("[-] Starting @ {}!".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
 	data = Data()
-	graphs = data.get_graphs()
+	graphs, labels = data.get_graphs()
 	print("[*] Graph dataset loaded: {} graphs".format(len(graphs)))
 
 	# implement function for dataset sampler
-	processor = DataProcessor(graphs)
+	processor = DataProcessor(graphs, labels)
 	dataloader = tch.utils.data.DataLoader(
 					processor,
 					batch_size=config["batch"])
 
 	params = {
-		"input_size": processor.trunc_length,
+		"input_size": processor.M,
 		"num_layers": 4,
 		"hidden_size": 128,
 		"num_directions": 1,
