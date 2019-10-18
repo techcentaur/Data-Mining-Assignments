@@ -3,7 +3,6 @@ import networkx as nx
 
 from config import config
 
-
 class Data:
     def __init__(self):
         self.labelMap = {}

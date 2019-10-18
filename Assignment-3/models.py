@@ -1,12 +1,13 @@
 import torch
-from torch import (nn, zeros)
+from torch import nn
+
 from torch.autograd import Variable
 from torch.nn.utils.rnn import (pad_packed_sequence, pack_padded_sequence)
 
 class GRUModel(nn.Module):
+
     def __init__(self, params):
         super().__init__()
-
         self.params = params
 
         self.hidden = None
@@ -21,9 +22,8 @@ class GRUModel(nn.Module):
                     out_features=self.params["output_size"],
                     bias=True)
 
-    def forward(self, X, packed_sequence=True):
+    def forward(self, X):
         X, self.hidden = self.layer1(X, self.hidden)
-        if packed_sequence:
-            X = pad_packed_sequence(X, batch_first=True)[0]
+        X = pad_packed_sequence(X, batch_first=True)[0]
         X = self.layer2(X)
         return X
