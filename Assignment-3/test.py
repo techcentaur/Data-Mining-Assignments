@@ -3,7 +3,6 @@ Generating graphs
 """
 import torch as tch
 from config import config
-
 from torch.autograd import Variable
 
 

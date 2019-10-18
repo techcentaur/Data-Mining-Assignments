@@ -19,24 +19,23 @@ def get_pack_length(Y, L):
         packlength.extend([min(i, tch.FloatTensor(Y).size(2))] * tmp)
     return packlength
 
-def ____training____(params, loader):
-    model1 = params["model1"]
-    model2 = params["model2"]
-    dataloader = params["data_loader"]
-
+def ____training____(data_loader, processor,
+                    model1, model2,
+                    m1_opt, m2_opt,
+                    m1_sched, m2_sched):
     model1.train()
     model2.train()
 
-    for i, d in enumerate(dataloader):
+    for i, d in enumerate(data_loader):
         model1.zero_grad()
         model2.zero_grad()
 
-        sequence_list = d['seq'].float()
+        seq_list = d['seq'].float()
         values = {'X': [], 'Y': [], 'L': []}
 
-        for seq in sequence_list:
-            Xdatum = np.zeros((params["processor"].maxnodes, params["processor"].trunc_length))
-            Ydatum = np.zeros((params["processor"].maxnodes, params["processor"].trunc_length))
+        for seq in seq_list:
+            Xdatum = np.zeros((processor.max_nodes, processor.M))
+            Ydatum = np.zeros((processor.max_nodes, processor.M))
 
             Xdatum[0, :] = 1
 
@@ -46,10 +45,6 @@ def ____training____(params, loader):
             values['X'].append(Xdatum)
             values['Y'].append(Ydatum)
             values['L'].append(seq.shape[0])
-
-        # syntax of using pack_padded_sequence
-        values['X'] = [x[0: max(values['L']), :] for x in values['X']]
-        values['Y'] = [x[0: max(values['L']), :] for x in values['Y']]
 
         model1.hidden = Variable(
                     tch.zeros(model1.params["num_layers"] * model1.params["num_directions"],
@@ -61,15 +56,8 @@ def ____training____(params, loader):
             tch.FloatTensor(values['L']),
             batch_first=True).data
 
-        # print(values['Y'])
-        # print(tch.FloatTensor(values['Y']).size())
-        # print(values['L'])
-        # print(Ypackpad.size())
-        # print(Ypackpad)
-
         Ypacksize = Ypackpad.size()
         Ypackpad = Ypackpad.view(Ypacksize[0], Ypacksize[1], 1)
-        # print(Ypackpad)
 
         X1 = Variable(tch.FloatTensor(values['X']))
         Y1 = Variable(tch.FloatTensor(values['Y']))
@@ -81,51 +69,30 @@ def ____training____(params, loader):
 
         assert X2.shape==Y2.shape
 
-        # print(X1)
-        # print(values['L'])
         X1 = pack_padded_sequence(X1, values['L'], batch_first=True, enforce_sorted=False)
-        # print(X1.data.size())
         X1out = model1(X1)
-        # print(X1out.shape)
-        # while True:
-        #     pass
-        # batch seq hiddensize
 
         X1outpacked = pack_padded_sequence(X1out, values['L'], batch_first=True).data
         HSsize = X1outpacked.size()
 
-        newhidden = Variable(
-            tch.zeros(
-                model2.params["num_layers"]-1,
-                HSsize[0],
-                HSsize[1]))
-
+        newhidden = Variable(tch.zeros(
+                model2.params["num_layers"]-1, HSsize[0], HSsize[1]))
         model2.hidden = tch.cat(
-                (X1outpacked.view(1, HSsize[0], HSsize[1]),
-                    newhidden
-                ), dim = 0)
+                (X1outpacked.view(1, HSsize[0], HSsize[1]), newhidden), dim = 0)
+
         pl = get_pack_length(values['Y'], values['L'])
 
-        # print(values['X'])
-        # print(values['L'])
-        # p = pack_padded_sequence(
-        #     tch.FloatTensor(values['X']),
-        #     tch.FloatTensor(values['L']),
-        #     batch_first=True).data
-        # print(p)
-
         outY = pack_padded_sequence(X2, pl, batch_first=True, enforce_sorted=False)
-        outY = model2(outY)
-        outY = tch.sigmoid(outY)
+        outY = tch.sigmoid(model2(outY))
 
         loss = F.binary_cross_entropy(outY, Y2)
         loss.backward()
 
-        params["m2_opt"].step()
-        params["m1_opt"].step()
+        m2_opt.step()
+        m1_opt.step()
 
-        params["m2_sched"].step()
-        params["m1_sched"].step()
+        m2_sched.step()
+        m1_sched.step()
 
         print("loss: {}".format(loss.tolist(), loss))
 
@@ -150,22 +117,18 @@ def train(model1, model2, data_loader, processor):
 
     epoch = 0
     while epoch <= config['train']['epochs']:
-        time_start = time.time()
+        ____training____(
+            data_loader=data_loader,
+            processor=processor,
+            model1=model1,
+            model2=model2,
+            m1_opt=model1_optimizer,
+            m2_opt=model2_optimizer,
+            m1_sched=model1_scheduler,
+            m2_sched=model2_scheduler
+        )
 
-        params = {
-            "data_loader": data_loader,
-            "processor": processor,
-            "model1": model1,
-            "model2": model2,
-            "m1_opt": model1_optimizer,
-            "m2_opt": model2_optimizer,
-            "m1_sched": model1_scheduler,
-            "m2_sched": model2_scheduler
-        }
-        ____training____(params, processor)
-
-        # print("[*] Epoch {} | Time {}".format(epoch+1, time.time() - time_start))
         epoch += 1
 
-    ## give the model a test run
+    # give the model a test run
     test.testing(model1, model2, processor)

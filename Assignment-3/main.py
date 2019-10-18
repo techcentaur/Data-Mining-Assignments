@@ -40,5 +40,5 @@ if __name__ == '__main__':
 	}
 	model2 = GRUModel(params)
 
-	# # implement training wrapper function
+	# implement training wrapper function
 	train(model1, model2, dataloader, processor)
