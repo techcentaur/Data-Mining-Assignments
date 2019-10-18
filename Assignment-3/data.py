@@ -79,11 +79,7 @@ class Data:
         matrices = [nx.to_numpy_matrix(g) for g in graphs]
         return matrices
 
-    def network_graph_to_matrix(self, graph, is_list=False):
-        """convert the graph to adjacency matrix where every element is itself in list,
-        where rest of the list elements encodes the edge label
-        """
-        
+    def network_graph_to_matrix(self, graph, is_list=False):        
         if is_list:
             alist = []
             for g in graph:
