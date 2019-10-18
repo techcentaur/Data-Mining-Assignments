@@ -1,6 +1,8 @@
 import time
 import torch as tch
 import numpy as np
+
+import test
 from config import config
 
 import torch.nn.functional as F
@@ -8,7 +10,6 @@ from torch import optim
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
-
 
 def get_pack_length(Y, L):
     packlength = []
@@ -55,9 +56,6 @@ def ____training____(params, loader):
                     len(values['L']),
                     model1.params["hidden_size"]))
 
-        X1 = Variable(tch.FloatTensor(values['X']))
-        Y1 = Variable(tch.FloatTensor(values['Y']))
-
         Ypackpad = pack_padded_sequence(
             tch.FloatTensor(values['Y']),
             tch.FloatTensor(values['L']),
@@ -65,6 +63,8 @@ def ____training____(params, loader):
         Ypacksize = Ypackpad.size()
         Ypackpad = Ypackpad.view(Ypacksize[0], Ypacksize[1], 1)
 
+        X1 = Variable(tch.FloatTensor(values['X']))
+        Y1 = Variable(tch.FloatTensor(values['Y']))
         X2 = Variable(tch.cat((
             tch.ones(Ypackpad.size(0), 1, 1),
             Ypackpad[:, 0:-1, :]),
@@ -145,3 +145,6 @@ def train(model1, model2, data_loader, processor):
 
         # print("[*] Epoch {} | Time {}".format(epoch+1, time.time() - time_start))
         epoch += 1
+
+    ## give the model a test run
+    test.testing(model1, model2, processor)

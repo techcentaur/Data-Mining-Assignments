@@ -19,11 +19,11 @@ class GRUModel(nn.Module):
         self.layer2 = nn.Linear(
                     in_features=self.params["hidden_size"],
                     out_features=self.params["output_size"],
-                    bias=True
-                    )
+                    bias=True)
 
-    def forward(self, X):
+    def forward(self, X, packed_sequence=True):
         X, self.hidden = self.layer1(X, self.hidden)
-        X = pad_packed_sequence(X, batch_first=True)[0]
+        if packed_sequence:
+            X = pad_packed_sequence(X, batch_first=True)[0]
         X = self.layer2(X)
         return X
