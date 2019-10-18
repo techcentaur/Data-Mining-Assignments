@@ -1,6 +1,8 @@
 import queue
 import numpy as np
 import networkx as nx
+from numpy.random import (randint, permutation)
+
 from config import config
 
 

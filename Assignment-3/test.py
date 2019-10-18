@@ -16,16 +16,15 @@ def testing(model1, model2, processor):
             processor.maxnodes,
             processor.trunc_length))
 
-    step = Variable(tch.ones(
+    SOS = Variable(tch.ones(
         config["test"]["batch_size"],
         1, processor.trunc_length
         ))
     for node in range(processor.maxnodes):
         # take hidden state of model1 (graph/node-level rnn) provide
         # it to model2 (edge-level rnn)
-        out1 = model1(step, packed_sequence=False)
+        out1 = model1(SOS, packed_sequence=False)
         out1size = out1.size()
-        print(out1size)
 
         # batch_size comes to first in rnn module
         model2.hidden = tch.cat(
@@ -41,14 +40,18 @@ def testing(model1, model2, processor):
         # TODO: add sample_sigmoid to model.py
         for j in range(min(processor.trunc_length, node+1)):
             tmp = model2(Xin, packed_sequence=False)
+            print(tmp)
+            while True:
+                pass
             # function not implemented
             Xin = processor.sampling(tmp, sample=True, sample_time=1)
 
-            Xout[:, :, j] = Xin
+            Xout[:, :, j:j+1] = Xin
             model2.hidden = Variable(model2.hidden.data)
 
-        Ypredictions[:, node, :] = Xout
+        Ypredictions[:, node:node+1, :] = Xout
         model1.hiddden = Variable(model1.hidden.data)
+        break
     _Ypredictions_ = Ypredictions.data.long()
 
     predicted_graphs = []

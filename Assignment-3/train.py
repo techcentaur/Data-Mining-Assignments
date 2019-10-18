@@ -60,8 +60,16 @@ def ____training____(params, loader):
             tch.FloatTensor(values['Y']),
             tch.FloatTensor(values['L']),
             batch_first=True).data
+
+        # print(values['Y'])
+        # print(tch.FloatTensor(values['Y']).size())
+        # print(values['L'])
+        # print(Ypackpad.size())
+        # print(Ypackpad)
+
         Ypacksize = Ypackpad.size()
         Ypackpad = Ypackpad.view(Ypacksize[0], Ypacksize[1], 1)
+        # print(Ypackpad)
 
         X1 = Variable(tch.FloatTensor(values['X']))
         Y1 = Variable(tch.FloatTensor(values['Y']))
@@ -73,9 +81,14 @@ def ____training____(params, loader):
 
         assert X2.shape==Y2.shape
 
+        # print(X1)
+        # print(values['L'])
         X1 = pack_padded_sequence(X1, values['L'], batch_first=True, enforce_sorted=False)
+        # print(X1.data.size())
         X1out = model1(X1)
         # print(X1out.shape)
+        # while True:
+        #     pass
         # batch seq hiddensize
 
         X1outpacked = pack_padded_sequence(X1out, values['L'], batch_first=True).data
@@ -92,6 +105,14 @@ def ____training____(params, loader):
                     newhidden
                 ), dim = 0)
         pl = get_pack_length(values['Y'], values['L'])
+
+        # print(values['X'])
+        # print(values['L'])
+        # p = pack_padded_sequence(
+        #     tch.FloatTensor(values['X']),
+        #     tch.FloatTensor(values['L']),
+        #     batch_first=True).data
+        # print(p)
 
         outY = pack_padded_sequence(X2, pl, batch_first=True, enforce_sorted=False)
         outY = model2(outY)
