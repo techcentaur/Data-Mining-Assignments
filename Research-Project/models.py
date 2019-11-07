@@ -1,4 +1,4 @@
-from keras.layers import GRU, Activation, Input, Reshape
+from keras.layers import GRU, Activation, Input, Reshape, Concatenate, Lambda
 from keras import Model
 import keras
 import functools
@@ -7,8 +7,37 @@ import numpy as np
 
 
 DROPOUT_RATE = 0.5
-NODES_LAYERS_DMS = [2, 4]
-EDGES_LAYERS_DMS = [2, 4]
+NODES_LAYERS_DMS = (2, 4)
+EDGES_LAYERS_DMS = (2, 4)
+COMBINED_LAYERS_DMS = (2, 4)
+
+
+# Input is expected to be flattened concatenated Node Label ohv and edge labels' adjacency list ohv
+def combined_gru(node_vocab_size, edge_vocab_size, max_nodes, trunc_length, layers_dms=COMBINED_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
+    input_shape = (max_nodes, node_vocab_size + edge_vocab_size*trunc_length)
+    x = Input(input_shape)
+    y = x
+    for dm in layers_dms:
+        y = GRU(dm, activation='tanh', dropout=dropout_rate,
+                recurrent_dropout=dropout_rate, return_sequences=True)(y)
+    y = GRU(input_shape[1], dropout=dropout_rate, recurrent_dropout=dropout_rate, return_sequences=True)(y)
+
+    node_softmax = Lambda(lambda x: x[:, :, :node_vocab_size])(y)
+    edge_softmax = Lambda(lambda x: x[:, :,  node_vocab_size:])(y)
+
+    edge_softmax = Reshape((max_nodes, trunc_length, edge_vocab_size))(edge_softmax)
+
+    node_softmax = Activation('softmax')(node_softmax)
+    edge_softmax = Activation(lambda x: keras.activations.softmax(x, 1))(edge_softmax)
+
+    edge_softmax = Reshape((max_nodes, trunc_length*edge_vocab_size,))(edge_softmax)
+    y = Concatenate()([node_softmax, edge_softmax])
+
+    model = Model(inputs=x, outputs=y)
+    model.compile(optimizer='Adam', loss='binary_crossentropy',
+                  metrics=['accuracy'])
+    model.summary()
+    return model
 
 
 def node_gru(input_shape, layers_dms=NODES_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
@@ -53,5 +82,5 @@ def edge_gru(input_shape, layers_dms=EDGES_LAYERS_DMS, dropout_rate=DROPOUT_RATE
     return model
 
 
-model = edge_gru((10, 20))
-model.fit(np.random.rand(32, 10, 20), np.random.rand(32, 10, 20), batch_size=8)
+model = combined_gru(10, 3, 5, 4)
+model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
