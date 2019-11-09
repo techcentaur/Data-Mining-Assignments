@@ -13,6 +13,8 @@ COMBINED_LAYERS_DMS = (2, 4)
 
 
 # Input is expected to be flattened concatenated Node Label ohv and edge labels' adjacency list ohv
+# In the vocabulary of node labels, the first token is SOS, second is EOS.
+# In the vocabulary of edge labels, the first token is NO_EDGE.
 def combined_gru(node_vocab_size, edge_vocab_size, max_nodes, trunc_length, layers_dms=COMBINED_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
     input_shape = (max_nodes, node_vocab_size + edge_vocab_size*trunc_length)
     x = Input(input_shape)
@@ -28,7 +30,7 @@ def combined_gru(node_vocab_size, edge_vocab_size, max_nodes, trunc_length, laye
     edge_softmax = Reshape((max_nodes, trunc_length, edge_vocab_size))(edge_softmax)
 
     node_softmax = Activation('softmax')(node_softmax)
-    edge_softmax = Activation(lambda x: keras.activations.softmax(x, 1))(edge_softmax)
+    edge_softmax = Activation(lambda x: keras.activations.softmax(x, -1))(edge_softmax)
 
     edge_softmax = Reshape((max_nodes, trunc_length*edge_vocab_size,))(edge_softmax)
     y = Concatenate()([node_softmax, edge_softmax])
@@ -81,6 +83,50 @@ def edge_gru(input_shape, layers_dms=EDGES_LAYERS_DMS, dropout_rate=DROPOUT_RATE
     model.summary()
     return model
 
+def sample(adj_mat_row, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
+    node_part = adj_mat_row[:node_vocab_size]
+    edge_part = adj_mat_row[node_vocab_size:]
+    edge_part = np.reshape(edge_part, (trunc_length, edge_vocab_size))
+
+    out_node_part = np.zeros((node_vocab_size,))
+    a = np.random.choice(node_vocab_size, 1, node_part.tolist())
+    out_node_part[a] = 1
+
+    out_edge_part = np.zeros((trunc_length, edge_vocab_size))
+    for i in range(trunc_length):
+        print()
+        out_edge_part[i, int(np.random.choice(edge_vocab_size, 1, edge_part[i].tolist())[0])] = 1
+
+    out_edge_part = np.reshape(out_edge_part, (trunc_length * edge_vocab_size,))
+    return np.concatenate((out_node_part, out_edge_part))
+
+
+
+def generate(model, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
+    # init starting graph input
+    nodes_input = np.zeros(node_vocab_size)
+    # SOS
+    nodes_input[0] = 1
+    edges_input = np.zeros((trunc_length, edge_vocab_size))
+    # NO_EDGE
+    edges_input[:, 0] = 1
+    edges_input = np.reshape(edges_input, (trunc_length * edge_vocab_size,))
+    combined_input = np.concatenate((nodes_input, edges_input))
+    X = np.zeros((1, max_nodes, node_vocab_size + edge_vocab_size*trunc_length))
+    X[0, 0, :] = combined_input
+
+    for i in range(max_nodes-1):
+        y = model.predict((X))[0]
+        y = sample(y[i, :], node_vocab_size, edge_vocab_size, max_nodes, trunc_length)
+        X[0, i + 1, :] = y
+        if y[1] == 1:
+            break
+
+    return X
+
 
 model = combined_gru(10, 3, 5, 4)
 model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
+y = generate(model, 10, 3, 5, 4)
+print(y.shape)
+print(y)
