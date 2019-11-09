@@ -1,95 +1,124 @@
 import queue
 import numpy as np
 import networkx as nx
+from config import config
+import keras
 from numpy.random import (randint, permutation)
 
-from config import config
+class DataGenerator(keras.utils.Sequence):
+    def __init__(self, g_matrices, e_labels,  n_labels, batch_size=1):
+        self.g_matrices = g_matrices
+        self.e_labels = e_labels
+        self.n_labels = n_labels
+        
+        self.num_graphs = len(g_matrices)
+        self.max_nodes = max([g_matrices[x].shape[0] for x in range(len(g_matrices))])
 
+        self.edge_one_hot_vector_size = e_labels[0].shape[2]
+        self.node_one_hot_vector_size = n_labels[0].shape[1]
 
-class DataProcessor:
-	def __init__(self, graphs, labels):
-		self.graphs = graphs
-		self.labels = labels
-		
-		self.num_graphs = len(self.graphs)
-		self.max_nodes = max([self.graphs[x].shape[0] for x in range(len(self.graphs))])
+        self.batch_size = batch_size
 
-		bigmax = 0
-		smolmax = 0
-		for i in range(self.num_graphs):
-			g = self.graphs[i].copy()
+        bigmax = 0
+        smolmax = 0
 
-			pi = permutation(g.shape[0])
-			g = g[np.ix_(pi, pi)]
+        for i in range(self.num_graphs):
+            g = self.g_matrices[i].copy()
 
-			v = randint(g.shape[0])
-			bfs = self.breadth_first_search(g, v)
+            pi = permutation(g.shape[0])
+            g = g[np.ix_(pi, pi)]
 
-			g = g[np.ix_(bfs, bfs)]
-			g = np.tril(g, k=-1)[1:g.shape[0], 0:g.shape[0]-1]
+            v = randint(g.shape[0])
+            bfs = self.breadth_first_search(g, v)
 
-			k = 0
-			for j in range(g.shape[0]-1):
-				f = g[j, k:j+1]
-				k = (j+1) - len(f) + np.amin(np.nonzero(f)[0])
-				
-				if len(f) > smolmax:
-					smolmax = len(f)
+            g = g[np.ix_(bfs, bfs)]
+            g = np.tril(g, k=-1)[1:g.shape[0], 0:g.shape[0]-1]
 
-			if smolmax > bigmax:
-				bigmax = smolmax
+            k = 0
+            for j in range(g.shape[0]-1):
+                f = g[j, k:j+1]
+                k = (j+1) - len(f) + np.amin(np.nonzero(f)[0])
+                
+                if len(f) > smolmax:
+                    smolmax = len(f)
 
-		self.M = bigmax 
+            if smolmax > bigmax:
+                bigmax = smolmax
 
-	def __len__(self):
-		return self.num_graphs
+        self.M = bigmax 
 
-	def __getitem__(self, i):
-		g = self.graphs[i].copy()
-		l = self.labels[i].copy()
+    def __len__(self):
+        return (self.num_graphs//self.batch_size)
 
-		pi = permutation(g.shape[0])
+    def __getitem__(self, batch_index):
 
-		g = g[np.ix_(pi, pi)]
-		l = l[np.ix_(pi, pi)]
+        seqshape = self.M*self.edge_one_hot_vector_size + self.node_one_hot_vector_size
+        n1h = self.node_one_hot_vector_size
+        e1h = self.edge_one_hot_vector_size     
+        
+        X =  np.zeros((self.batch_size, max_nodes, seqshape))
+        Y =  np.zeros((self.batch_size, max_nodes, seqshape))
 
-		v = randint(g.shape[0])
-		bfs = self.breadth_first_search(g, v)
+        for enum, g in enumerate(self.g_matrices[self.batch_size *  batch_index: self.batch_size * (batch_index+1) ]):
 
-		g = g[np.ix_(bfs, bfs)]
-		l = l[np.ix_(bfs, bfs)]
+            g = g.copy()
+            e = self.e_labels[i + self.batch_size * batch_index].copy()
+            n = self.n_labels[i + self.batch_size * batch_index].copy()
 
-		g = np.tril(g, k=-1)[1:g.shape[0], 0:g.shape[0]-1]
+            pi = permutation(g.shape[0])
 
-		seq = np.zeros((g.shape[0], self.M))
-		lseq = np.zeros((l.shape[0], l.shape[1], l.shape[2]))
-		
-		t = self.M
-		for j in range(g.shape[0]-1):
-			p1 = max(j-t+1, 0)
-			seq[j, (p1-(j+1))+t:t] = g[j, p1:j+1]
-			lseq[j, (p1-(j+1))+t:t] = l[j, p1:j+1]
-		
-		return  {'seq': seq, 'lseq': lseq}
+            g = g[np.ix_(pi, pi)]
+            e = e[np.ix_(pi, pi)]
+            n = n[np.ix_(pi, pi)]
 
+            v = randint(g.shape[0])
+            bfs = self.breadth_first_search(g, v)
 
-	def breadth_first_search(self, g, v):
-		bfs = []
-		num = g.shape[0]
-		visited = [False for x in range(num)]
+            g = g[np.ix_(bfs, bfs)]
+            e = e[np.ix_(bfs, bfs)]
+            n = n[np.ix_(bfs, bfs)]
 
-		q = queue.Queue()
-		q.put(v)
-		visited[v] = True
+            g = np.tril(g, k=-1)[1:g.shape[0], 0:g.shape[0]-1]
 
-		while not q.empty():
-			pop = q.get()
-			bfs.append(pop)
+            t = self.M
+            seq = np.zeros((g.shape[0], seqshape))
 
-			for succ in range(num):
-				if int(g[pop, succ]) == 1:
-					if not visited[succ]:
-						q.put(succ)
-						visited[succ] = True
-		
-		return np.array(bfs)
+            for j in range(g.shape[0]-1):
+                p1 = max(j-t+1, 0)
+                for k in range(p1, j+1):
+                    seq[j, t*(k-(j+1)+t)+n1h: t*(k-(j+1)+t+1)+n1h] = e[j, k,0:t]
+                seq[j, 0:n1h] = n[j, 0:n1h]
+
+            X[enum, 0, 0] = 1
+            for i in range(self.M):
+                X[enum, 0, n1h + i * e1h] = 1
+
+            X[enum, 1: seq.size()[0], :] = seq[0:seq.size()[0]-1, :]
+            Y[enum, 0: seq.size()[0], :] = seq
+
+        return  X, Y
+
+    def on_epoch_end(self): 
+        # may want to implement
+        pass
+
+    def breadth_first_search(self, g, v):
+        bfs = []
+        num = g.shape[0]
+        visited = [False for x in range(num)]
+
+        q = queue.Queue()
+        q.put(v)
+        visited[v] = True
+
+        while not q.empty():
+            pop = q.get()
+            bfs.append(pop)
+
+            for succ in range(num):
+                if int(g[pop, succ]) == 1:
+                    if not visited[succ]:
+                        q.put(succ)
+                        visited[succ] = True
+        
+        return np.array(bfs)

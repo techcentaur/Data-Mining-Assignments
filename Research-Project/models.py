@@ -4,6 +4,8 @@ import keras
 import functools
 import operator
 import numpy as np
+from processing import DataGenerator
+from  data import Data
 
 
 DROPOUT_RATE = 0.5
@@ -125,8 +127,14 @@ def generate(model, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
     return X
 
 
-model = combined_gru(10, 3, 5, 4)
+d = Data()
+graphs = d.get_graphs()
+p = d.network_graph_to_matrix(graphs)
+dg = DataGenerator(p[0], p[1], p[2], batch_size=64)
+model = combined_gru(dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
+model = combined_gru = 
 model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
-y = generate(model, 10, 3, 5, 4)
+model.fit_generator(dg)
+y = generate(model, dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
 print(y.shape)
 print(y)
