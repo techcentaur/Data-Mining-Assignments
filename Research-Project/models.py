@@ -9,9 +9,9 @@ from  data import Data
 
 
 DROPOUT_RATE = 0.5
-NODES_LAYERS_DMS = (2, 4)
-EDGES_LAYERS_DMS = (2, 4)
-COMBINED_LAYERS_DMS = (2, 4)
+NODES_LAYERS_DMS = (100, 100)
+EDGES_LAYERS_DMS = (100, 100)
+COMBINED_LAYERS_DMS = (100, 100)
 
 
 # Input is expected to be flattened concatenated Node Label ohv and edge labels' adjacency list ohv
@@ -127,29 +127,13 @@ def generate(model, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
     return X
 
 
-import sys
-d = Data()
-graphs = d.get_graphs()
-p = d.network_graph_to_matrix(graphs)
+if __name__ == "__main__":
+    d = Data()
+    graphs = d.get_graphs()
+    p = d.network_graph_to_matrix(graphs)
+    dg = DataGenerator(p[0], p[1], p[2], batch_size=64)
 
-print("Sizes: ")
-print(d.n_hot_vector)
-print(d.e_hot_vector)
-
-print("Label Map:")
-print(d.labelMap)
-print(d.edge_label_map)
-
-print("Graph:")
-for g in graphs:
-    print(g.edges(data=True))
-    print(g.nodes(data=True))
-
-dg = DataGenerator(p[0], p[1], p[2], batch_size=2)
-model = combined_gru(dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
-# model = combined_gru = 
-# model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
-model.fit_generator(dg)
-y = generate(model, dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
-print(y.shape)
-print(y)
+    model = combined_gru(dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
+    model.fit_generator(dg)
+    for i in range(NUM_GRAPHS_TO_GENERATE):
+        y = generate(model, dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)

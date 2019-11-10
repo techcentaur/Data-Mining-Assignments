@@ -1,44 +1,20 @@
-import torch as tch
-from datetime import datetime
-
+from processing import DataGenerator
 from data import Data
-from train import train
-from config import config
-from models import GRUModel
-from processing import DataProcessor
+from models import combined_gru, generate
 
-if __name__ == '__main__':
-	now = datetime.now()
-	print("[*] Graph Generative Model: GraphRNN\n")
-	print("[-] Starting @ {}!".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+NUM_GRAPHS_TO_GENERATE = 100
+BATCH_SIZE = 64
+EPOCHS = 10
 
-	data = Data()
-	graphs, labels = data.get_graphs()
-	print("[*] Graph dataset loaded: {} graphs".format(len(graphs)))
+if __name__ == "__main__":
+    d = Data()
+    graphs = d.get_graphs()
+    p = d.network_graph_to_matrix(graphs)
+    dg = DataGenerator(p[0], p[1], p[2], batch_size=BATCH_SIZE)
 
-	# implement function for dataset sampler
-	processor = DataProcessor(graphs, labels)
-	dataloader = tch.utils.data.DataLoader(
-					processor,
-					batch_size=config["batch"])
-
-	params = {
-		"input_size": processor.M,
-		"num_layers": 4,
-		"hidden_size": 128,
-		"num_directions": 1,
-		"output_size": 16
-	}
-	model1 = GRUModel(params)
-
-	params = {
-		"input_size": 1,
-		"hidden_size": 16,
-		"num_layers": 4,
-		"num_directions": 1,
-		"output_size": 1
-	}
-	model2 = GRUModel(params)
-
-	# implement training wrapper function
-	train(model1, model2, dataloader, processor)
+    model = combined_gru(dg.node_one_hot_vector_size,
+                         dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
+    model.fit_generator(dg, epochs=EPOCHS)
+    for i in range(NUM_GRAPHS_TO_GENERATE):
+        y = generate(model, dg.node_one_hot_vector_size,
+                     dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)

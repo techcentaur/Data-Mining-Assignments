@@ -1,2 +1,3 @@
 - Dense layers can be added to the GRU model, using `TimeDistributed`.
 - The output dimension of the GRU should same as the flattned size of the subsequent Reshape layer.
+- EOS, SOS labels
