@@ -127,13 +127,28 @@ def generate(model, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
     return X
 
 
+import sys
 d = Data()
 graphs = d.get_graphs()
 p = d.network_graph_to_matrix(graphs)
-dg = DataGenerator(p[0], p[1], p[2], batch_size=64)
+
+print("Sizes: ")
+print(d.n_hot_vector)
+print(d.e_hot_vector)
+
+print("Label Map:")
+print(d.labelMap)
+print(d.edge_label_map)
+
+print("Graph:")
+for g in graphs:
+    print(g.edges(data=True))
+    print(g.nodes(data=True))
+
+dg = DataGenerator(p[0], p[1], p[2], batch_size=2)
 model = combined_gru(dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
-model = combined_gru = 
-model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
+# model = combined_gru = 
+# model.fit(np.random.rand(32, 5, 10 + 4*3), np.random.rand(32, 5, 10 + 4*3), batch_size=8)
 model.fit_generator(dg)
 y = generate(model, dg.node_one_hot_vector_size, dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
 print(y.shape)

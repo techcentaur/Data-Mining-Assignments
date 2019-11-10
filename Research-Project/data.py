@@ -6,11 +6,13 @@ from config import config
 
 class Data:
     def __init__(self):
-        self.labelMap = {}
+        self.labelMap = {"SOS": 0, "EOS": 1}
+        self.edge_label_map = {"NO_EGDE": 0}
 
     def get_graphs(self):
         file = config["data"]["filepath"]
-        labelMapIndex = 0
+        labelMapIndex = 2
+        edge_label_index = 1
 
         graphs = []
         with open(file, 'r') as f:
@@ -61,9 +63,12 @@ class Data:
                         edges_read = 0
                     else:
                         edge_params = line.split(' ')
-
+                        tmpe = edge_params[2].strip()
+                        if not str(tmpe) in self.edge_label_map:
+                            self.edge_label_map[str(tmpe)] = edge_label_index
+                            edge_label_index += 1
                         edges_list.append((int(edge_params[0]), int(
-                            edge_params[1]), {'label': int(edge_params[2])}))
+                            edge_params[1]), {'label': (tmpe)}))
                         # graphs[idx].add_edge(int(edge_params[0]), int(
                         #     edge_params[1]), label=int(edge_params[2]))
                         edges_read += 1
@@ -74,31 +79,30 @@ class Data:
                             read_state = -1
         return graphs
 
-    def network_graph_to_matrix(self, graphs, e_label_max_length=4, n_label_max_length=5):
+    def network_graph_to_matrix(self, graphs):
         # conversion of graph as object of networkx to numpy adjacency matrix
        
         adj_matrices = [nx.to_numpy_matrix(g) for g in graphs]
         edge_labels, node_labels = [], []
 
+        self.n_hot_vector = len(self.labelMap)
+        self.e_hot_vector = len(self.edge_label_map)
+
         for i, graph in enumerate(graphs):
             num_nodes = adj_matrices[i].shape[0]
 
-            e_labels = np.zeros((num_nodes, num_nodes, e_label_max_length))
-            n_labels = np.zeros((num_nodes, n_label_max_length))
+            e_labels = np.zeros((num_nodes, num_nodes, self.e_hot_vector))
+            for x in range(num_nodes):
+                for y in range(num_nodes):
+                    e_labels[x, y, 0] = 1
 
-            # one hot encoding for zeros
-            for k in range(num_nodes):
-                for j in range(num_nodes):
-                    e_labels[k, j, 0] = 1
-            for k in range(num_nodes):
-                n_labels[k, 0] = 1
+            n_labels = np.zeros((num_nodes, self.n_hot_vector))
 
             for n1, n2, l1 in graph.edges(data=True):
-                e_labels[n1, n2, l1['label']] = 1
+                e_labels[n1, n2, self.edge_label_map[str(l1['label'])]] = 1
                 e_labels[n1, n2, 0] = 0
-                e_labels[n2, n1, l1['label']] = 1
+                e_labels[n2, n1, self.edge_label_map[str(l1['label'])]] = 1
                 e_labels[n2, n1, 0] = 0
-
             edge_labels.append(e_labels)
 
             for (n1, l1) in graph.nodes(data=True):
