@@ -2,20 +2,18 @@ import numpy as np
 import networkx as nx
 
 from processing import DataGenerator
-from config import config
 
 class Data:
     def __init__(self):
         self.labelMap = {"SOS": 0, "EOS": 1}
         self.edge_label_map = {"NO_EGDE": 0}
 
-    def get_graphs(self):
-        file = config["data"]["filepath"]
+    def get_graphs(self, graph_filename):
         labelMapIndex = 2
         edge_label_index = 1
 
         graphs = []
-        with open(file, 'r') as f:
+        with open(graph_filename, 'r') as f:
             idx = -1
             read_state = 0
             total_nodes = -1

@@ -1,15 +1,19 @@
 import queue
 import numpy as np
 import networkx as nx
-from config import config
 import keras
 from numpy.random import (randint, permutation)
 
+
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, g_matrices, e_labels,  n_labels, batch_size=1):
+
+    def __init__(self, g_matrices, e_labels,  n_labels, n_label_map, e_label_map, batch_size=1):
         self.g_matrices = g_matrices
         self.e_labels = e_labels
         self.n_labels = n_labels
+
+        self.n_label_inv_map = {v: k for k, v in n_label_map.items()}
+        self.e_label_inv_map = {v: k for k, v in e_label_map.items()}
         
         self.num_graphs = len(g_matrices)
         self.max_nodes = max([g_matrices[x].shape[0] for x in range(len(g_matrices))]) + 1
@@ -72,6 +76,7 @@ class DataGenerator(keras.utils.Sequence):
             SOS[0, n1h + i * e1h] = 1
             EOS[0, n1h + i * e1h] = 1
 
+        self.SOS = SOS
 
         for enum, g in enumerate(self.g_matrices[self.batch_size *  batch_index: self.batch_size * (batch_index+1) +1]):
 
@@ -148,3 +153,66 @@ class DataGenerator(keras.utils.Sequence):
                         visited[succ] = True
         
         return np.array(bfs)
+
+    def decode_adj(self, long_adj):
+        '''
+            recover to adj from adj_output
+            note: here adj_output have shape (n-1)*m
+        '''
+
+        long_adj = long_adj[0, 1:]
+
+        adj_output = np.zeros((long_adj.shape[0], self.M))
+        node_list = np.zeros((long_adj.shape[0],))
+
+        for i in range(long_adj.shape[0]):
+            node_list[i] = np.argmax(long_adj[i, 0:self.node_one_hot_vector_size])
+            for j in range(self.M):
+                adj_output[i, j] = np.argmax(long_adj[i, self.node_one_hot_vector_size + self.edge_one_hot_vector_size * j: self.node_one_hot_vector_size + self.edge_one_hot_vector_size * (j+1)])
+
+        max_prev_node = self.M
+        adj = np.zeros((adj_output.shape[0], adj_output.shape[0]))
+        for i in range(adj_output.shape[0]):
+            input_start = max(0, i - max_prev_node + 1)
+            input_end = i + 1
+            output_start = max_prev_node + max(0, i - max_prev_node + 1) - (i + 1)
+            output_end = max_prev_node
+            adj[i, input_start:input_end] = adj_output[i,::-1][output_start:output_end] # reverse order
+        adj_full = np.zeros((adj_output.shape[0]+1, adj_output.shape[0]+1))
+        n = adj_full.shape[0]
+        adj_full[1:n, 0:n-1] = np.tril(adj, 0)
+        adj_full = adj_full + adj_full.T
+
+        count = 0
+        for nl in node_list:
+            if nl == 1 or nl==0:
+                break
+            count += 1
+
+        return adj_full[:count, :count], node_list[:count]
+
+    def write_graph(self, file, adj_list, node_list):
+        output_string = ""
+        output_string += "# \n"
+        output_string += str(node_list.shape[0]) + "\n"
+        # write nodes
+        for node in node_list:
+            # considering SOS doesn't occur in between graph
+            output_string += str(self.n_label_inv_map[node]) + "\n"
+
+        num_edges = 0
+        edge_string = ""
+        # write edges
+        for i in range(adj_list.shape[0]):
+            for j in range(0, i):
+                label = adj_list[i][j]
+                if label != 0:
+                    edge_string += str(i) + " " + str(j) + " " + str(self.e_label_inv_map[label]) + "\n"
+                    num_edges += 1
+
+        if num_edges != 0:
+            output_string += str(num_edges) + "\n" + edge_string + "\n"
+        else:
+            output_string += str(num_edges) + "\n"
+
+        file.write(output_string)

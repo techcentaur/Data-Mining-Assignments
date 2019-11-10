@@ -1,5 +1,4 @@
 import test
-from config import config
 
 import time
 import torch as tch
