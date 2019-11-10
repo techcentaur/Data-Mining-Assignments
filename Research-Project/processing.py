@@ -60,9 +60,9 @@ class DataGenerator(keras.utils.Sequence):
         n1h = self.node_one_hot_vector_size
         e1h = self.edge_one_hot_vector_size     
         
-        print("Seqshape: ", seqshape)
-        print("MAX NODES: ", self.max_nodes)
-        print(self.M, e1h, n1h)
+        # print("Seqshape: ", seqshape)
+        # print("MAX NODES: ", self.max_nodes)
+        # print(self.M, e1h, n1h)
 
         X =  np.zeros((self.batch_size, self.max_nodes, seqshape))
         Y =  np.zeros((self.batch_size, self.max_nodes, seqshape))
@@ -124,8 +124,8 @@ class DataGenerator(keras.utils.Sequence):
             # SOS -> 1000 100 100
             # seq
             # EOS -> 0100 100 100
-        print("X",  X, end='\n\n\n\n')
-        print("Y",  Y)
+        # print("X",  X, end='\n\n\n\n')
+        # print("Y",  Y)
         return  X, Y
 
 
@@ -191,9 +191,9 @@ class DataGenerator(keras.utils.Sequence):
 
         return adj_full[:count, :count], node_list[:count]
 
-    def write_graph(self, file, adj_list, node_list):
+    def write_graph(self, file, adj_list, node_list, graph_id):
         output_string = ""
-        output_string += "# \n"
+        output_string += "# " + str(graph_id) + "\n"
         output_string += str(node_list.shape[0]) + "\n"
         # write nodes
         for node in node_list:

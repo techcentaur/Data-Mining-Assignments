@@ -9,9 +9,9 @@ from  data import Data
 
 
 DROPOUT_RATE = 0.5
-NODES_LAYERS_DMS = (100, 100)
-EDGES_LAYERS_DMS = (100, 100)
-COMBINED_LAYERS_DMS = (100, 100)
+# NODES_LAYERS_DMS = (100, 100)
+# EDGES_LAYERS_DMS = (100, 100)
+COMBINED_LAYERS_DMS = (10, 10)
 
 
 # Input is expected to be flattened concatenated Node Label ohv and edge labels' adjacency list ohv
@@ -44,46 +44,46 @@ def combined_gru(node_vocab_size, edge_vocab_size, max_nodes, trunc_length, laye
     return model
 
 
-def node_gru(input_shape, layers_dms=NODES_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
-    x = Input(input_shape)
-    y = x
-    for dm in layers_dms:
-        y = GRU(dm, activation='tanh', dropout=dropout_rate,
-                recurrent_dropout=dropout_rate, return_sequences=True)(y)
-    y = GRU(input_shape[1], activation=lambda x: keras.activations.softmax(x, 1), dropout=dropout_rate,
-            recurrent_dropout=dropout_rate, return_sequences=True)(y)
-    model = Model(inputs=x, outputs=y)
-    model.compile(optimizer='Adam', loss='binary_crossentropy',
-                  metrics=['accuracy'])
-    model.summary()
-    return model
-
-
-def edge_gru(input_shape, layers_dms=EDGES_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
-    x = Input(input_shape)
-    # size = functools.reduce(operator.mul, input_shape, 1)
-    input_shape_list = list(input_shape)
-    y = Reshape(tuple(
-        input_shape_list[:2]+[input_shape_list[-2]*input_shape_list[-1]]), name='predictions')(x)
-    for dm in layers_dms:
-        y = GRU(dm, activation='tanh', dropout=dropout_rate,
-                recurrent_dropout=dropout_rate, return_sequences=True)(y)
-    # size = flattened version of the output shape
-    # size = functools.reduce(operator.mul, input_shape, 1)
-    # print(size)
-    # print(input_shape)
-    y = GRU(input_shape_list[-1]*input_shape_list[-2], activation='tanh', dropout=dropout_rate,
-            recurrent_dropout=dropout_rate, return_sequences=True)(y)
-    model = Model(inputs=x, outputs=y)
-    model.summary()
-    y = Reshape(input_shape, name='predictions')(y)
-    y = keras.activations.softmax(y, axis=1)
-
-    model = Model(inputs=x, outputs=y)
-    model.compile(optimizer='Adam', loss='binary_crossentropy',
-                  metrics=['accuracy'])
-    model.summary()
-    return model
+# def node_gru(input_shape, layers_dms=NODES_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
+#     x = Input(input_shape)
+#     y = x
+#     for dm in layers_dms:
+#         y = GRU(dm, activation='tanh', dropout=dropout_rate,
+#                 recurrent_dropout=dropout_rate, return_sequences=True)(y)
+#     y = GRU(input_shape[1], activation=lambda x: keras.activations.softmax(x, 1), dropout=dropout_rate,
+#             recurrent_dropout=dropout_rate, return_sequences=True)(y)
+#     model = Model(inputs=x, outputs=y)
+#     model.compile(optimizer='Adam', loss='binary_crossentropy',
+#                   metrics=['accuracy'])
+#     model.summary()
+#     return model
+#
+#
+# def edge_gru(input_shape, layers_dms=EDGES_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
+#     x = Input(input_shape)
+#     # size = functools.reduce(operator.mul, input_shape, 1)
+#     input_shape_list = list(input_shape)
+#     y = Reshape(tuple(
+#         input_shape_list[:2]+[input_shape_list[-2]*input_shape_list[-1]]), name='predictions')(x)
+#     for dm in layers_dms:
+#         y = GRU(dm, activation='tanh', dropout=dropout_rate,
+#                 recurrent_dropout=dropout_rate, return_sequences=True)(y)
+#     # size = flattened version of the output shape
+#     # size = functools.reduce(operator.mul, input_shape, 1)
+#     # print(size)
+#     # print(input_shape)
+#     y = GRU(input_shape_list[-1]*input_shape_list[-2], activation='tanh', dropout=dropout_rate,
+#             recurrent_dropout=dropout_rate, return_sequences=True)(y)
+#     model = Model(inputs=x, outputs=y)
+#     model.summary()
+#     y = Reshape(input_shape, name='predictions')(y)
+#     y = keras.activations.softmax(y, axis=1)
+#
+#     model = Model(inputs=x, outputs=y)
+#     model.compile(optimizer='Adam', loss='binary_crossentropy',
+#                   metrics=['accuracy'])
+#     model.summary()
+#     return model
 
 def sample(adj_mat_row, node_vocab_size, edge_vocab_size, max_nodes, trunc_length):
     node_part = adj_mat_row[:node_vocab_size]
@@ -96,7 +96,6 @@ def sample(adj_mat_row, node_vocab_size, edge_vocab_size, max_nodes, trunc_lengt
 
     out_edge_part = np.zeros((trunc_length, edge_vocab_size))
     for i in range(trunc_length):
-        print()
         out_edge_part[i, int(np.random.choice(edge_vocab_size, 1, edge_part[i].tolist())[0])] = 1
 
     out_edge_part = np.reshape(out_edge_part, (trunc_length * edge_vocab_size,))

@@ -3,9 +3,9 @@ from data import Data
 from models import combined_gru, generate
 import sys
 
-NUM_GRAPHS_TO_GENERATE = 2
+NUM_GRAPHS_TO_GENERATE = 50
 BATCH_SIZE = 2
-EPOCHS = 1
+EPOCHS = 10
 
 if __name__ == "__main__":
     d = Data()
@@ -24,9 +24,11 @@ if __name__ == "__main__":
                      dg.edge_one_hot_vector_size,  dg.max_nodes,  dg.M)
 
         outp, nodelist = dg.decode_adj(y)
-        print("final")
-        print(outp, nodelist)
+        # print("final")
+        # print(outp, nodelist)
         if nodelist.shape[0] != 0:
-            dg.write_graph(gen_file, outp, nodelist)
+            dg.write_graph(gen_file, outp, nodelist, i)
+        else:
+            i -= 1
 
     gen_file.close()
