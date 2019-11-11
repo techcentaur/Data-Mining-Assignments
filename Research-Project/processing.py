@@ -7,7 +7,7 @@ from numpy.random import (randint, permutation)
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, g_matrices, e_labels, n_labels, n_label_map, e_label_map, batch_size=1):
+    def __init__(self, g_matrices, e_labels, n_labels, n_label_map, e_label_map, batch_size=64):
         self.g_matrices = g_matrices
         self.e_labels = e_labels
         self.n_labels = n_labels

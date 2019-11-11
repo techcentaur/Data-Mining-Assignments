@@ -3,6 +3,7 @@ import networkx as nx
 
 from processing import DataGenerator
 
+
 class Data:
     def __init__(self):
         self.labelMap = {"SOS": 0, "EOS": 1}
@@ -45,7 +46,6 @@ class Data:
                             nodes_list.append(
                                 (nodes_read, {'label': self.labelMap[lab]}))
 
-
                         # graphs[idx].add_node(
                         #     nodes_read, label=line.strip('\n'))
                         nodes_read += 1
@@ -79,7 +79,7 @@ class Data:
 
     def network_graph_to_matrix(self, graphs):
         # conversion of graph as object of networkx to numpy adjacency matrix
-       
+
         adj_matrices = [nx.to_numpy_matrix(g) for g in graphs]
         edge_labels, node_labels = [], []
 

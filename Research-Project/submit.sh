@@ -7,9 +7,9 @@
 ### Specify email address to use for notification.
 #PBS -M $USER@iitd.ac.in
 ####
-#PBS -l select=1:ncpus=2:ngpus=1
+#PBS -l select=1:ncpus=1:ngpus=1
 ### Specify "wallclock time" required for this job, hhh:mm:ss
-#PBS -l walltime=00:30:00
+#PBS -l walltime=04:00:00
 
 #PBS -l software=python
 # After job starts, must goto working directory. 
