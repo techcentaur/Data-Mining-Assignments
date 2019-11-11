@@ -110,7 +110,7 @@ def sample(adj_mat_row, d):
     return np.concatenate((out_node_part, out_edge_part))
 
 
-def generate(model, d):
+def generate(model, d, batch_size):
     # init starting graph input
     nodes_input = np.zeros(d.node_vocab_size)
     # SOS
@@ -120,15 +120,17 @@ def generate(model, d):
     edges_input[:, 0] = 1
     edges_input = np.reshape(edges_input, (d.M * d.edge_vocab_size,))
     combined_input = np.concatenate((nodes_input, edges_input))
-    X = np.zeros((1, d.max_nodes, d.node_vocab_size +
+    X = np.zeros((batch_size, d.max_nodes, d.node_vocab_size +
                   d.edge_vocab_size*d.M))
-    X[0, 0, :] = combined_input
+    for i in range(batch_size):
+        X[i, 0, :] = combined_input
 
     for i in range(d.max_nodes-1):
-        y = model.predict((X))[0]
-        y = sample(y[i, :], d)
-        X[0, i + 1, :] = y
-        if y[1] == 1:
-            break
+        ys = model.predict(X)
+        for idx, y in enumerate(ys):
+            y = sample(y[i, :], d)
+            X[idx, i + 1, :] = y
+            # if y[1] == 1:
+            #     break
 
     return X
