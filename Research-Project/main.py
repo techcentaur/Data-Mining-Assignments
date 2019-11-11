@@ -8,14 +8,12 @@ import random
 NUM_GRAPHS_TO_GENERATE = 50
 BATCH_SIZE = 64
 EPOCHS = 5
-# VALIDATION_SPLIT = 0.2
 
 if __name__ == "__main__":
     start = time.time()
     d = Data()
     graphs = d.get_graphs(sys.argv[1])
     num_graphs = len(graphs)
-    split_index = round(VALIDATION_SPLIT*num_graphs)
     test_graphs = graphs[:split_index]
     validation_graphs = graphs[split_index:]
 
