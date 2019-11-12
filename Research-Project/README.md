@@ -44,6 +44,16 @@ The RNN would also take the activation of the node-level RNN at the same time-st
 
 The output of the RNNs are softmax probability distribution over the vocabulary. So at the time of generating new nodes and edges, we would sample from that distribution.
 
+## Added
+
+### Interface
+
+To train and generate graphs run the following command:
+```sh
+python main.py <training dataset path> <file path to write generated graphs> <file path to save model weights>
+```
+
+dependencies written in `requirement.txt`
 
 ### Team Members
 - Ankit Solanki 2016CS50401

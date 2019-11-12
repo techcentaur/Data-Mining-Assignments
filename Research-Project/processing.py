@@ -16,7 +16,8 @@ class DataGenerator(keras.utils.Sequence):
         self.e_label_inv_map = {v: k for k, v in e_label_map.items()}
 
         self.num_graphs = len(g_matrices)
-        self.max_nodes = max([g_matrices[x].shape[0] for x in range(len(g_matrices))]) + 1
+        self.max_nodes = max([g_matrices[x].shape[0]
+                              for x in range(len(g_matrices))]) + 1
 
         self.edge_one_hot_vector_size = e_labels[0].shape[2]
         self.node_one_hot_vector_size = n_labels[0].shape[1]
@@ -106,7 +107,8 @@ class DataGenerator(keras.utils.Sequence):
             for j in range(g.shape[0] - 1):
                 p1 = max(j - t + 1, 0)
                 for k in range(p1, j + 1):
-                    seq[j, e1h * (k - (j + 1) + t) + n1h: e1h * (k - (j + 1) + t + 1) + n1h] = e[j, k, 0:t]
+                    seq[j, e1h * (k - (j + 1) + t) + n1h: e1h *
+                        (k - (j + 1) + t + 1) + n1h] = e[j, k, 0:t]
                 seq[j, 0:n1h] = n[j, 0:n1h]
 
             X[enum, 1: seq.shape[0], :] = seq[0:seq.shape[0] - 1, :]
@@ -166,20 +168,23 @@ class DataGenerator(keras.utils.Sequence):
         node_list = np.zeros((long_adj.shape[0],))
 
         for i in range(long_adj.shape[0]):
-            node_list[i] = np.argmax(long_adj[i, 0:self.node_one_hot_vector_size])
+            node_list[i] = np.argmax(
+                long_adj[i, 0:self.node_one_hot_vector_size])
             for j in range(self.M):
                 adj_output[i, j] = np.argmax(long_adj[i,
-                                             self.node_one_hot_vector_size + self.edge_one_hot_vector_size * j: self.node_one_hot_vector_size + self.edge_one_hot_vector_size * (
-                                                     j + 1)])
+                                                      self.node_one_hot_vector_size + self.edge_one_hot_vector_size * j: self.node_one_hot_vector_size + self.edge_one_hot_vector_size * (
+                                                          j + 1)])
 
         max_prev_node = self.M
         adj = np.zeros((adj_output.shape[0], adj_output.shape[0]))
         for i in range(adj_output.shape[0]):
             input_start = max(0, i - max_prev_node + 1)
             input_end = i + 1
-            output_start = max_prev_node + max(0, i - max_prev_node + 1) - (i + 1)
+            output_start = max_prev_node + \
+                max(0, i - max_prev_node + 1) - (i + 1)
             output_end = max_prev_node
-            adj[i, input_start:input_end] = adj_output[i, ::-1][output_start:output_end]  # reverse order
+            adj[i, input_start:input_end] = adj_output[i, ::-
+                                                       1][output_start:output_end]  # reverse order
         adj_full = np.zeros((adj_output.shape[0] + 1, adj_output.shape[0] + 1))
         n = adj_full.shape[0]
         adj_full[1:n, 0:n - 1] = np.tril(adj, 0)
@@ -195,7 +200,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def write_graph(self, file, adj_list, node_list, graph_id):
         output_string = ""
-        output_string += "# " + str(graph_id) + "\n"
+        output_string += "#" + str(graph_id) + "\n"
         output_string += str(node_list.shape[0]) + "\n"
         # write nodes
         for node in node_list:
@@ -209,12 +214,19 @@ class DataGenerator(keras.utils.Sequence):
             for j in range(0, i):
                 label = adj_list[i][j]
                 if label != 0:
-                    edge_string += str(i) + " " + str(j) + " " + str(self.e_label_inv_map[label]) + "\n"
+                    edge_string += str(i) + " " + str(j) + " " + \
+                        str(self.e_label_inv_map[label]) + "\n"
                     num_edges += 1
 
         if num_edges != 0:
             output_string += str(num_edges) + "\n" + edge_string + "\n"
         else:
-            output_string += str(num_edges) + "\n"
+            output_string += str(num_edges) + "\n" + "\n"
 
-        file.write(output_string)
+        if num_edges != 0:
+            # print(output_string)
+            file.write(output_string)
+            return True
+        else:
+            return False
+

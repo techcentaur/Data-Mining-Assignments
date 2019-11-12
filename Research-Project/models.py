@@ -11,7 +11,7 @@ from data import Data
 DROPOUT_RATE = 0.3
 # NODES_LAYERS_DMS = (100, 100)
 # EDGES_LAYERS_DMS = (100, 100)
-COMBINED_LAYERS_DMS = (100,)
+COMBINED_LAYERS_DMS = (100, 50)
 
 
 # Input is expected to be flattened concatenated Node Label ohv and edge labels' adjacency list ohv
@@ -19,7 +19,8 @@ COMBINED_LAYERS_DMS = (100,)
 # In the vocabulary of edge labels, the first token is NO_EDGE.
 # d is datagen for graphs
 def combined_gru(d, layers_dms=COMBINED_LAYERS_DMS, dropout_rate=DROPOUT_RATE):
-    input_shape = (d.max_nodes, d.node_one_hot_vector_size + d.edge_one_hot_vector_size*d.M)
+    input_shape = (d.max_nodes, d.node_one_hot_vector_size +
+                   d.edge_one_hot_vector_size*d.M)
     x = Input(input_shape)
     y = x
     for dm in layers_dms:
