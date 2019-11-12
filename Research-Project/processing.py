@@ -160,7 +160,7 @@ class DataGenerator(keras.utils.Sequence):
             note: here adj_output have shape (n-1)*m
         '''
 
-        long_adj = long_adj[0, 1:]
+        long_adj = long_adj[1:]
 
         adj_output = np.zeros((long_adj.shape[0], self.M))
         node_list = np.zeros((long_adj.shape[0],))
